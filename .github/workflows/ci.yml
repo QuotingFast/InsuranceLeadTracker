@@ -10,7 +10,7 @@ jobs:
       # 1️⃣  Check out the code
       - uses: actions/checkout@v4
 
-      # 2️⃣  Install Node 18 (change if you use another version)
+      # 2️⃣  Install Node 18 and cache npm
       - uses: actions/setup-node@v4
         with:
           node-version: '18'
@@ -19,10 +19,12 @@ jobs:
       # 3️⃣  Install dependencies
       - run: npm ci
 
-      # 4️⃣  Build / test / (optional) lint
-      - run: npm run build            # keep this
-      # - run: npm test               # uncomment when you add tests
-      # - run: npm run lint           # uncomment if you have a lint script
+      # 4️⃣  Build (add tests or lint later by uncommenting)
+      - run: npm run build
+      # - run: npm test            # uncomment when tests exist
+      # - run: npm run lint        # uncomment when you add a lint script
 
       # 5️⃣  Quick runtime smoke-test on a throw-away port
       - run: PORT=4000 npm run dev --if-present
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}   # placeholder value set in repo secrets
