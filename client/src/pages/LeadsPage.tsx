@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -92,36 +91,38 @@ export default function LeadsPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-        {/* Header */}
-        <div className="bg-white shadow-sm border-b border-slate-200">
-          <div className="px-4 py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900">Lead Management</h1>
-                <p className="text-slate-600">View and manage all insurance leads</p>
-              </div>
-              <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                {filteredLeads.length} Total Leads
-              </Badge>
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b border-slate-200">
+        <div className="px-4 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">Lead Management</h1>
+              <p className="text-slate-600">View and manage all insurance leads</p>
             </div>
+            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+              {filteredLeads.length} Total Leads
+            </Badge>
           </div>
         </div>
+      </div>
 
-        {/* Search and Filters */}
-        <div className="p-4">
-          <div className="relative mb-6">
+      {/* Main Content */}
+      <div className="p-6">
+        {/* Search */}
+        <div className="mb-6">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
             <Input
-              type="text"
               placeholder="Search leads by name, phone, or QF code..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
             />
           </div>
+        </div>
 
-          {/* Leads List */}
-          <div className="space-y-4">
+        {/* Leads List */}
+        <div className="space-y-4">
             {filteredLeads.length === 0 ? (
               <Card>
                 <CardContent className="pt-6 text-center">
