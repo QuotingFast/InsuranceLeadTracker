@@ -364,13 +364,57 @@ export async function registerRoutes(app: Express, server: Server): Promise<void
 
       const normalizedPhone = normalizePhoneNumber(phoneNumber);
       
-      if (await storage.isPhoneOptedOut(normalizedPhone)) {
-        return res.status(400).json({ error: 'Phone number has opted out' });
+      // Check if phone is opted out or suppressed
+      const isOptedOut = await storage.isPhoneOptedOut(normalizedPhone);
+      const isSuppressed = await storage.isPhoneSuppressed(normalizedPhone);
+      
+      if (isOptedOut || isSuppressed) {
+        return res.status(400).json({ 
+          error: 'Cannot send SMS to opted-out or suppressed number' 
+        });
       }
 
-      const result = await sendSms(normalizedPhone, message);
+      // Automatically append opt-out text if not already present
+      let finalMessage = message.trim();
+      const optOutText = ' Reply STOP to opt out.';
+      const hasOptOut = /reply\s+stop|text\s+stop|stop\s+to/i.test(finalMessage);
+      
+      if (!hasOptOut) {
+        finalMessage += optOutText;
+      }
+
+      // Validate TCPA compliance
+      const now = new Date();
+      const validation = validateTCPACompliance(normalizedPhone, now);
+      
+      if (!validation.isCompliant) {
+        return res.status(400).json({ 
+          error: `TCPA Violation: ${validation.reason}`,
+          nextValidTime: validation.nextValidTime 
+        });
+      }
+
+      const result = await sendSms(normalizedPhone, finalMessage);
       
       if (result.success) {
+        // Log the SMS in database if we have a matching lead
+        try {
+          const recentLeads = await storage.getRecentLeads(1000);
+          const matchingLead = recentLeads.find(l => normalizePhoneNumber(l.phone) === normalizedPhone);
+          
+          if (matchingLead) {
+            await storage.createSmsMessage({
+              leadId: matchingLead.id,
+              messageType: 'custom',
+              messageText: finalMessage,
+              status: 'sent',
+              twilioSid: result.messageSid
+            });
+          }
+        } catch (logError) {
+          console.warn('Failed to log SMS in database:', logError);
+        }
+
         res.json({ success: true, messageSid: result.messageSid });
       } else {
         res.status(400).json({ 
