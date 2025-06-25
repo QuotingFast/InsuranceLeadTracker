@@ -288,8 +288,8 @@ export const webhookLeadSchema = z.object({
   id: z.number().optional(),
   url: z.string().optional(),
   timestamp: z.string().optional(),
-  sell_price: z.string().optional(),
-  campaign_id: z.number().optional(),
+  sell_price: z.union([z.number(), z.string()]).transform(val => typeof val === 'string' ? parseFloat(val) : val).optional(),
+  campaign_id: z.union([z.number(), z.string()]).transform(val => typeof val === 'string' ? val : val.toString()).optional(),
   meta: z.object({
     trusted_form_cert_url: z.string().optional(),
     tcpa_compliant: z.boolean().optional(),
