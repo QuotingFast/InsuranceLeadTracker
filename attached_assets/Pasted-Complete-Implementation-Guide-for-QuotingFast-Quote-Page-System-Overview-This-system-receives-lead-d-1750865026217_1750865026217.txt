@@ -1,0 +1,340 @@
+Complete Implementation Guide for QuotingFast Quote Page System
+Overview
+This system receives lead data via webhook, stores it in a database, generates a unique quote page URL, and sends an SMS to the lead. The quote page displays personalized information and uses Ringba's dynamic number insertion to route calls to the appropriate buyer based on the lead's insurance profile.
+System Architecture
+Lead Form → Webhook → Your Server → Database
+                          ↓
+                    Generate Quote ID
+                          ↓
+                    Send SMS with URL
+                          ↓
+                 Lead visits quote page
+                          ↓
+              Ringba routes call to buyer
+1. Database Schema
+Create this MySQL database structure:
+sqlCREATE DATABASE quotingfast_db;
+USE quotingfast_db;
+
+CREATE TABLE quotes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    quote_id VARCHAR(20) UNIQUE NOT NULL,
+    first_name VARCHAR(100),
+    last_name VARCHAR(100),
+    phone VARCHAR(20),
+    email VARCHAR(255),
+    city VARCHAR(100),
+    state VARCHAR(2),
+    zip VARCHAR(10),
+    current_carrier VARCHAR(100),
+    insurance_status ENUM('yes', 'no'),
+    dui_status ENUM('yes', 'no'),
+    drivers JSON,
+    vehicles JSON,
+    source VARCHAR(50),
+    ip_address VARCHAR(45),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL 30 DAY),
+    page_views INT DEFAULT 0,
+    last_viewed TIMESTAMP NULL,
+    INDEX idx_quote_id (quote_id),
+    INDEX idx_phone (phone),
+    INDEX idx_created (created_at),
+    INDEX idx_expires (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+2. Webhook Endpoint (webhook.php)
+Create this file to receive and process webhook data:
+php<?php
+// webhook.php - Receives lead data and creates quote pages
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+
+// Database configuration
+$db_config = [
+    'host' => 'localhost',
+    'name' => 'quotingfast_db',
+    'user' => 'your_db_user',
+    'pass' => 'your_db_password'
+];
+
+// Connect to database
+try {
+    $pdo = new PDO(
+        "mysql:host={$db_config['host']};dbname={$db_config['name']};charset=utf8mb4",
+        $db_config['user'],
+        $db_config['pass'],
+        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+    );
+} catch (PDOException $e) {
+    error_log("Database connection failed: " . $e->getMessage());
+    http_response_code(500);
+    exit(json_encode(['error' => 'System temporarily unavailable']));
+}
+
+// Get webhook data
+$raw_input = file_get_contents('php://input');
+$webhook_data = json_decode($raw_input, true);
+
+if (!$webhook_data) {
+    http_response_code(400);
+    exit(json_encode(['error' => 'Invalid JSON data']));
+}
+
+// Validate required fields
+$required_fields = ['first_name', 'last_name', 'phone', 'city', 'state', 'zip'];
+foreach ($required_fields as $field) {
+    if (empty($webhook_data[$field])) {
+        http_response_code(400);
+        exit(json_encode(['error' => "Missing required field: $field"]));
+    }
+}
+
+// Generate unique quote ID
+$quote_id = 'QF-' . date('Y') . '-' . strtoupper(bin2hex(random_bytes(3)));
+
+// Prepare data for database
+$quote_data = [
+    'quote_id' => $quote_id,
+    'first_name' => $webhook_data['first_name'],
+    'last_name' => $webhook_data['last_name'],
+    'phone' => preg_replace('/[^0-9]/', '', $webhook_data['phone']),
+    'email' => $webhook_data['email'] ?? null,
+    'city' => $webhook_data['city'],
+    'state' => strtoupper($webhook_data['state']),
+    'zip' => $webhook_data['zip'],
+    'current_carrier' => $webhook_data['current_carrier'] ?? 'Not Specified',
+    'insurance_status' => $webhook_data['insurance_status'] ?? 'no',
+    'dui_status' => $webhook_data['dui_status'] ?? 'no',
+    'drivers' => json_encode($webhook_data['drivers'] ?? []),
+    'vehicles' => json_encode($webhook_data['vehicles'] ?? []),
+    'source' => $webhook_data['source'] ?? 'webhook',
+    'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null
+];
+
+// Insert into database
+try {
+    $sql = "INSERT INTO quotes (
+        quote_id, first_name, last_name, phone, email,
+        city, state, zip, current_carrier, insurance_status,
+        dui_status, drivers, vehicles, source, ip_address
+    ) VALUES (
+        :quote_id, :first_name, :last_name, :phone, :email,
+        :city, :state, :zip, :current_carrier, :insurance_status,
+        :dui_status, :drivers, :vehicles, :source, :ip_address
+    )";
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($quote_data);
+    
+    // Generate quote URL
+    $base_url = 'https://quotingfast.com';
+    $quote_url = $base_url . '/quote.php?id=' . $quote_id;
+    
+    // Send SMS (implement your SMS provider here)
+    $sms_message = "Hi {$quote_data['first_name']}, your auto insurance quote is ready! " .
+                  "Additional discounts require agent approval. " .
+                  "View your quote: {$quote_url} " .
+                  "Reply STOP to opt out.";
+    
+    // Example using Twilio (uncomment and configure)
+    /*
+    require_once 'vendor/autoload.php';
+    use Twilio\Rest\Client;
+    
+    $twilio_sid = 'your_account_sid';
+    $twilio_token = 'your_auth_token';
+    $twilio_from = '+1234567890';
+    
+    $twilio = new Client($twilio_sid, $twilio_token);
+    $twilio->messages->create(
+        '+1' . $quote_data['phone'],
+        [
+            'from' => $twilio_from,
+            'body' => $sms_message
+        ]
+    );
+    */
+    
+    // Return success response
+    echo json_encode([
+        'success' => true,
+        'quote_id' => $quote_id,
+        'quote_url' => $quote_url,
+        'message' => 'Quote generated successfully'
+    ]);
+    
+} catch (PDOException $e) {
+    error_log("Failed to save quote: " . $e->getMessage());
+    http_response_code(500);
+    exit(json_encode(['error' => 'Failed to process quote']));
+}
+?>
+3. Quote Display Page (quote.php)
+Create this file to display the personalized quote:
+php<?php
+// quote.php - Displays personalized quote page
+$quote_id = $_GET['id'] ?? '';
+
+if (!$quote_id || !preg_match('/^QF-\d{4}-[A-Z0-9]{6}$/', $quote_id)) {
+    header('Location: /error.html');
+    exit;
+}
+
+// Database configuration
+$db_config = [
+    'host' => 'localhost',
+    'name' => 'quotingfast_db',
+    'user' => 'your_db_user',
+    'pass' => 'your_db_password'
+];
+
+try {
+    $pdo = new PDO(
+        "mysql:host={$db_config['host']};dbname={$db_config['name']};charset=utf8mb4",
+        $db_config['user'],
+        $db_config['pass'],
+        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+    );
+    
+    // Fetch quote data
+    $stmt = $pdo->prepare("
+        SELECT * FROM quotes 
+        WHERE quote_id = ? 
+        AND expires_at > NOW()
+    ");
+    $stmt->execute([$quote_id]);
+    $quote = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$quote) {
+        header('Location: /expired.html');
+        exit;
+    }
+    
+    // Update page views
+    $update_stmt = $pdo->prepare("
+        UPDATE quotes 
+        SET page_views = page_views + 1, 
+            last_viewed = NOW() 
+        WHERE quote_id = ?
+    ");
+    $update_stmt->execute([$quote_id]);
+    
+    // Prepare data for JavaScript
+    $quote_data = [
+        'quote_id' => $quote['quote_id'],
+        'first_name' => $quote['first_name'],
+        'last_name' => $quote['last_name'],
+        'city' => $quote['city'],
+        'state' => $quote['state'],
+        'zip' => $quote['zip'],
+        'current_carrier' => $quote['current_carrier'],
+        'insurance_status' => $quote['insurance_status'],
+        'dui_status' => $quote['dui_status'],
+        'vehicles' => json_decode($quote['vehicles'], true),
+        'drivers' => json_decode($quote['drivers'], true)
+    ];
+    
+} catch (PDOException $e) {
+    error_log("Database error: " . $e->getMessage());
+    header('Location: /error.html');
+    exit;
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Include all the HTML/CSS/JS from the artifact here -->
+    <!-- The complete quote page code goes here -->
+</head>
+<body>
+    <!-- Page content -->
+    
+    <!-- Embed quote data for JavaScript -->
+    <script id="quoteData" type="application/json">
+        <?php echo json_encode($quote_data); ?>
+    </script>
+</body>
+</html>
+4. Required Webhook Data Format
+Your webhook must send this JSON structure:
+json{
+    "first_name": "Jessenia",
+    "last_name": "Rodriguez",
+    "phone": "3055551234",
+    "email": "jessenia@email.com",
+    "city": "Miami",
+    "state": "FL",
+    "zip": "33101",
+    "current_carrier": "State Farm",
+    "insurance_status": "yes",
+    "dui_status": "no",
+    "vehicles": [
+        {
+            "year": 2002,
+            "make": "Mazda",
+            "model": "B3000",
+            "vin": "1FTZR15E82TA04521",
+            "usage": "Personal"
+        },
+        {
+            "year": 2019,
+            "make": "Honda",
+            "model": "Civic",
+            "vin": "2HGFC2F59KH558934",
+            "usage": "Commute"
+        }
+    ],
+    "drivers": [
+        {
+            "name": "Jessenia Rodriguez",
+            "type": "primary"
+        },
+        {
+            "name": "Valorie Rodriguez",
+            "type": "covered"
+        }
+    ],
+    "source": "facebook_lead_form"
+}
+5. Ringba Routing Logic
+The system automatically routes calls based on:
+IF current_carrier = "Allstate" → Routes to Allstate campaign (+18336274480)
+ELSE IF dui_status = "yes" → Routes to DUI campaign (+18336503121)
+ELSE IF insurance_status = "yes" → Routes to clean insured campaign (+18889711908)
+ELSE → Routes to uninsured campaign (+18336503121)
+6. Error Pages
+Create these error pages:
+error.html:
+html<!DOCTYPE html>
+<html>
+<head>
+    <title>Quote Not Found</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial; text-align: center; padding: 50px; }
+        h1 { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <h1>Quote Not Found</h1>
+    <p>We couldn't find your quote. Please check your link or contact support.</p>
+    <p>Call us at 1-855-728-3669</p>
+</body>
+</html>
+expired.html:
+html<!DOCTYPE html>
+<html>
+<head>
+    <title>Quote Expired</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial; text-align: center; padding: 50px; }
+        h1 { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <h1>Quote Expired</h1>
+    <p>This quote has expired. Please call us for a new quote.</p>
+    <p>Call us at 1-855-728-3669</p>
+</body>
+</html>
