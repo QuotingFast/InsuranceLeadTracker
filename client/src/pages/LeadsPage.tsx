@@ -17,9 +17,7 @@ import {
   ExternalLink
 } from "lucide-react";
 import { formatPhoneNumber, getTimeAgo } from "@/lib/utils";
-import Sidebar from "@/components/Sidebar";
-import MobileBottomNav from "@/components/MobileBottomNav";
-import { useIsMobile } from "@/hooks/use-mobile";
+
 
 interface Driver {
   age: number;

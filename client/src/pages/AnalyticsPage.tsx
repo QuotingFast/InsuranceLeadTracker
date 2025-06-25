@@ -1,23 +1,8 @@
-import { useState } from "react";
-import { useIsMobile } from "@/hooks/use-mobile";
-import Sidebar from "@/components/Sidebar";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import QuoteAnalytics from "@/components/QuoteAnalytics";
-import { Button } from "@/components/ui/button";
 
 export default function AnalyticsPage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const isMobile = useIsMobile();
-
   return (
     <div className="min-h-screen bg-slate-50">
-      <Sidebar 
-        isOpen={sidebarOpen} 
-        onClose={() => setSidebarOpen(false)}
-        currentPage="analytics"
-      />
-
-      <div className={`transition-all duration-300 ${!isMobile && sidebarOpen ? 'ml-64' : ''}`}>
         {/* Header */}
         <div className="bg-white shadow-sm border-b border-slate-200">
           <div className="px-4 py-6">

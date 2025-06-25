@@ -476,9 +476,9 @@ export async function registerRoutes(app: Express, server: Server): Promise<void
         finalMessage += optOutText;
       }
 
-      // Validate TCPA compliance
+      // Validate TCPA compliance  
       const now = new Date();
-      const validation = validateTCPACompliance(normalizedPhone, now);
+      const validation = validateTCPACompliance(normalizedPhone, 'FL', now);
       
       if (!validation.isCompliant) {
         return res.status(400).json({ 

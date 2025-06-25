@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { useRealTimeData } from "@/hooks/useRealTimeData";
-import Sidebar from "@/components/Sidebar";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import MetricsGrid from "@/components/MetricsGrid";
 import RecentLeads from "@/components/RecentLeads";
 import QuickActions from "@/components/QuickActions";
@@ -16,7 +14,6 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const { toast } = useToast();
   
   // Real-time data hooks
@@ -68,14 +65,7 @@ export default function Dashboard() {
       {/* Mobile Header */}
       <div className="lg:hidden bg-white shadow-sm border-b border-slate-200 px-4 py-3">
         <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 -ml-2 text-slate-600"
-          >
-            <Menu className="h-5 w-5" />
-          </Button>
+          <div className="w-8"></div>
           <h1 className="text-lg font-semibold text-slate-900">Quoting Fast</h1>
           <div className="flex items-center space-x-2">
             <Button variant="ghost" size="sm" className="p-2 text-slate-600 relative">
@@ -89,15 +79,8 @@ export default function Dashboard() {
       </div>
 
       <div className="flex">
-        {/* Sidebar */}
-        <Sidebar 
-          isOpen={sidebarOpen} 
-          onClose={() => setSidebarOpen(false)}
-          currentPage="dashboard"
-        />
-
         {/* Main Content */}
-        <main className="flex-1 lg:pl-64">
+        <main className="flex-1">
           {/* Desktop Header */}
           <div className="hidden lg:block bg-white shadow-sm border-b border-slate-200 px-6 py-4">
             <div className="flex items-center justify-between">
@@ -176,8 +159,7 @@ export default function Dashboard() {
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation */}
-      <MobileBottomNav currentPage="dashboard" />
+
     </div>
   );
 }
