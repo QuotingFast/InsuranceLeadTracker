@@ -1,0 +1,385 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(222, 84%, 4.9%);
+  --muted: hsl(210, 40%, 96%);
+  --muted-foreground: hsl(215, 16%, 46.9%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(222, 84%, 4.9%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(222, 84%, 4.9%);
+  --border: hsl(214, 32%, 91%);
+  --input: hsl(214, 32%, 91%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(210, 40%, 96%);
+  --secondary-foreground: hsl(222, 84%, 4.9%);
+  --accent: hsl(210, 40%, 96%);
+  --accent-foreground: hsl(222, 84%, 4.9%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --ring: hsl(207, 90%, 54%);
+  --radius: 0.5rem;
+  --chart-1: hsl(207, 90%, 54%);
+  --chart-2: hsl(142, 76%, 36%);
+  --chart-3: hsl(45, 93%, 58%);
+  --chart-4: hsl(346, 87%, 58%);
+  --chart-5: hsl(262, 83%, 58%);
+  --sidebar-background: hsl(0, 0%, 100%);
+  --sidebar-foreground: hsl(222, 84%, 4.9%);
+  --sidebar-primary: hsl(207, 90%, 54%);
+  --sidebar-primary-foreground: hsl(210, 40%, 98%);
+  --sidebar-accent: hsl(210, 40%, 96%);
+  --sidebar-accent-foreground: hsl(222, 84%, 4.9%);
+  --sidebar-border: hsl(214, 32%, 91%);
+  --sidebar-ring: hsl(207, 90%, 54%);
+}
+
+.dark {
+  --background: hsl(222, 84%, 4.9%);
+  --foreground: hsl(210, 40%, 98%);
+  --muted: hsl(217, 32%, 17%);
+  --muted-foreground: hsl(215, 20%, 65%);
+  --popover: hsl(222, 84%, 4.9%);
+  --popover-foreground: hsl(210, 40%, 98%);
+  --card: hsl(222, 84%, 4.9%);
+  --card-foreground: hsl(210, 40%, 98%);
+  --border: hsl(217, 32%, 17%);
+  --input: hsl(217, 32%, 17%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(217, 32%, 17%);
+  --secondary-foreground: hsl(210, 40%, 98%);
+  --accent: hsl(217, 32%, 17%);
+  --accent-foreground: hsl(210, 40%, 98%);
+  --destructive: hsl(0, 62%, 30%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --ring: hsl(207, 90%, 54%);
+  --chart-1: hsl(207, 90%, 54%);
+  --chart-2: hsl(142, 76%, 36%);
+  --chart-3: hsl(45, 93%, 58%);
+  --chart-4: hsl(346, 87%, 58%);
+  --chart-5: hsl(262, 83%, 58%);
+  --sidebar-background: hsl(222, 84%, 4.9%);
+  --sidebar-foreground: hsl(210, 40%, 98%);
+  --sidebar-primary: hsl(207, 90%, 54%);
+  --sidebar-primary-foreground: hsl(210, 40%, 98%);
+  --sidebar-accent: hsl(217, 32%, 17%);
+  --sidebar-accent-foreground: hsl(210, 40%, 98%);
+  --sidebar-border: hsl(217, 32%, 17%);
+  --sidebar-ring: hsl(207, 90%, 54%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  /* Mobile safe area support */
+  .safe-area-pb {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(210, 40%, 96%);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(215, 16%, 46.9%);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(215, 20%, 35%);
+  }
+
+  /* Focus styles for accessibility */
+  .focus-visible:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2;
+  }
+
+  /* Loading animation */
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
+
+  /* Custom utilities for insurance theme */
+  .insurance-gradient {
+    background: linear-gradient(135deg, hsl(207, 90%, 54%) 0%, hsl(207, 90%, 64%) 100%);
+  }
+
+  .success-gradient {
+    background: linear-gradient(135deg, hsl(142, 76%, 36%) 0%, hsl(142, 76%, 46%) 100%);
+  }
+
+  .warning-gradient {
+    background: linear-gradient(135deg, hsl(45, 93%, 58%) 0%, hsl(45, 93%, 68%) 100%);
+  }
+
+  .danger-gradient {
+    background: linear-gradient(135deg, hsl(0, 84%, 60%) 0%, hsl(0, 84%, 70%) 100%);
+  }
+
+  /* Phone number input styling */
+  input[type="tel"] {
+    @apply font-mono;
+  }
+
+  /* Progress bar custom styling */
+  .progress-bar {
+    transition: width 0.5s ease-in-out;
+  }
+
+  /* Card hover effects */
+  .card-hover {
+    transition: all 0.2s ease-in-out;
+  }
+
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  }
+
+  /* Status indicator animations */
+  .status-pulse {
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  /* Custom badge styles */
+  .badge-success {
+    @apply bg-green-100 text-green-800 border-green-200;
+  }
+
+  .badge-warning {
+    @apply bg-amber-100 text-amber-800 border-amber-200;
+  }
+
+  .badge-danger {
+    @apply bg-red-100 text-red-800 border-red-200;
+  }
+
+  .badge-info {
+    @apply bg-blue-100 text-blue-800 border-blue-200;
+  }
+
+  /* Mobile responsive adjustments */
+  @media (max-width: 768px) {
+    .mobile-padding {
+      @apply px-4;
+    }
+
+    .mobile-text-sm {
+      @apply text-sm;
+    }
+
+    .mobile-compact {
+      @apply space-y-2;
+    }
+  }
+
+  /* Print styles for compliance reports */
+  @media print {
+    .no-print {
+      display: none !important;
+    }
+
+    .print-break {
+      page-break-before: always;
+    }
+
+    .print-avoid-break {
+      page-break-inside: avoid;
+    }
+  }
+}
+
+@layer components {
+  /* Insurance-specific button variants */
+  .btn-insurance {
+    @apply bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
+  }
+
+  .btn-success {
+    @apply bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-2 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2;
+  }
+
+  .btn-warning {
+    @apply bg-amber-600 hover:bg-amber-700 text-white font-medium px-4 py-2 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2;
+  }
+
+  .btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2;
+  }
+
+  /* Metric card styling */
+  .metric-card {
+    @apply bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow;
+  }
+
+  /* Compliance status indicators */
+  .compliance-pass {
+    @apply text-green-600 flex items-center;
+  }
+
+  .compliance-fail {
+    @apply text-red-600 flex items-center;
+  }
+
+  .compliance-warning {
+    @apply text-amber-600 flex items-center;
+  }
+
+  /* SMS status styling */
+  .sms-delivered {
+    @apply bg-green-100 text-green-800 border-green-200;
+  }
+
+  .sms-failed {
+    @apply bg-red-100 text-red-800 border-red-200;
+  }
+
+  .sms-pending {
+    @apply bg-amber-100 text-amber-800 border-amber-200;
+  }
+
+  /* Quote page specific styles */
+  .quote-container {
+    @apply max-w-4xl mx-auto px-4 py-8;
+  }
+
+  .quote-header {
+    @apply bg-white shadow-sm border-b border-slate-200 px-6 py-4;
+  }
+
+  .quote-section {
+    @apply bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6;
+  }
+
+  /* Alert styling */
+  .alert-info {
+    @apply bg-blue-50 border-blue-200 text-blue-800 p-3 rounded-lg border;
+  }
+
+  .alert-success {
+    @apply bg-green-50 border-green-200 text-green-800 p-3 rounded-lg border;
+  }
+
+  .alert-warning {
+    @apply bg-amber-50 border-amber-200 text-amber-800 p-3 rounded-lg border;
+  }
+
+  .alert-danger {
+    @apply bg-red-50 border-red-200 text-red-800 p-3 rounded-lg border;
+  }
+}
+
+@layer utilities {
+  /* Text utilities */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Spacing utilities for insurance forms */
+  .form-spacing {
+    @apply space-y-4;
+  }
+
+  .form-field {
+    @apply space-y-2;
+  }
+
+  /* Animation utilities */
+  .fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Mobile-first responsive utilities */
+  .mobile-hidden {
+    @apply hidden lg:block;
+  }
+
+  .mobile-only {
+    @apply block lg:hidden;
+  }
+
+  /* Insurance brand colors */
+  .text-insurance {
+    color: hsl(207, 90%, 54%);
+  }
+
+  .bg-insurance {
+    background-color: hsl(207, 90%, 54%);
+  }
+
+  .border-insurance {
+    border-color: hsl(207, 90%, 54%);
+  }
+
+  /* Status colors */
+  .text-success {
+    color: hsl(142, 76%, 36%);
+  }
+
+  .bg-success {
+    background-color: hsl(142, 76%, 36%);
+  }
+
+  .text-warning {
+    color: hsl(45, 93%, 58%);
+  }
+
+  .bg-warning {
+    background-color: hsl(45, 93%, 58%);
+  }
+
+  .text-danger {
+    color: hsl(0, 84%, 60%);
+  }
+
+  .bg-danger {
+    background-color: hsl(0, 84%, 60%);
+  }
+}
