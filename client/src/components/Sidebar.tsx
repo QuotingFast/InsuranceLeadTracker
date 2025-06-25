@@ -117,12 +117,13 @@ export default function Sidebar({ isOpen, onClose, currentPage, isCollapsed = fa
         {onToggleCollapse && (
           <button
             onClick={onToggleCollapse}
-            className="absolute -right-3 top-1/2 transform -translate-y-1/2 bg-white border border-slate-200 rounded-full p-1 shadow-sm hover:bg-slate-50 z-10"
+            className="absolute -right-3 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-1.5 shadow-lg transition-all duration-200 z-10"
+            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {isCollapsed ? (
-              <ChevronRight className="h-4 w-4 text-slate-600" />
+              <ChevronRight className="h-3 w-3" />
             ) : (
-              <ChevronLeft className="h-4 w-4 text-slate-600" />
+              <ChevronLeft className="h-3 w-3" />
             )}
           </button>
         )}
@@ -181,22 +182,15 @@ export default function Sidebar({ isOpen, onClose, currentPage, isCollapsed = fa
     </>
   );
 
-  return (
-    <>
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white shadow-lg border-r border-slate-200">
-        <div className="flex-1 flex flex-col min-h-0">
-          <SidebarContent />
-        </div>
-      </aside>
-
-      {/* Mobile Sidebar */}
+  // Mobile sidebar for small screens
+  if (isOpen && typeof window !== 'undefined' && window.innerWidth < 1024) {
+    return (
       <Sheet open={isOpen} onOpenChange={onClose}>
         <SheetContent side="left" className="w-64 p-0">
           <div className="flex-1 flex flex-col min-h-0">
             <SheetHeader className="px-6 py-4 border-b border-slate-200">
               <div className="flex items-center justify-between">
-                <SheetTitle className="text-xl font-bold text-blue-600">Quoting Fast</SheetTitle>
+                <SheetTitle className="text-xl font-bold text-blue-600">QuotePro Auto</SheetTitle>
                 <Button variant="ghost" size="sm" onClick={onClose} className="p-1">
                   <X className="h-4 w-4" />
                 </Button>
@@ -209,6 +203,13 @@ export default function Sidebar({ isOpen, onClose, currentPage, isCollapsed = fa
           </div>
         </SheetContent>
       </Sheet>
-    </>
+    );
+  }
+
+  // Desktop sidebar
+  return (
+    <div className="h-full flex flex-col bg-white shadow-lg border-r border-slate-200">
+      <SidebarContent />
+    </div>
   );
 }

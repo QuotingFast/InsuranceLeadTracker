@@ -124,7 +124,7 @@ export class DatabaseStorage implements IStorage {
   async createDriver(insertDriver: InsertDriver): Promise<Driver> {
     const [driver] = await db
       .insert(drivers)
-      .values(insertDriver)
+      .values([insertDriver])
       .returning();
     return driver;
   }
