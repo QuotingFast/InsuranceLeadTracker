@@ -46,7 +46,7 @@ export default function QuotePage() {
   const qfCode = params?.qfCode;
 
   const { data: lead, isLoading, error } = useQuery({
-    queryKey: ['/api/quote', qfCode],
+    queryKey: [`/api/quote/${qfCode}`],
     enabled: !!qfCode,
   });
 
