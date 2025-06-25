@@ -2,7 +2,7 @@ services:
   - type: web
     name: insurance-lead-tracker
     runtime: node
-    buildCommand: npm ci && npm run build
+    buildCommand: NODE_OPTIONS="--max_old_space_size=512" npm ci && NODE_OPTIONS="--max_old_space_size=512" npm run build
     startCommand: npm start
     plan: starter
     envVars:
