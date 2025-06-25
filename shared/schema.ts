@@ -128,7 +128,7 @@ export const vehicles = pgTable("vehicles", {
 // Keep existing tables
 export const smsMessages = pgTable("sms_messages", {
   id: serial("id").primaryKey(),
-  leadId: integer("leadId").notNull().references(() => leads.id, { onDelete: "cascade" }),
+  leadId: integer("lead_id").notNull().references(() => leads.id, { onDelete: "cascade" }),
   phone: text("phone").notNull(),
   message: text("message").notNull(),
   messageType: text("message_type").notNull(), // followup, urgent, lastchance, custom
