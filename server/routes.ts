@@ -171,7 +171,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
   startHourlyReports();
   startHealthChecks();
 
-  // Lead webhook endpoint
+  // Lead webhook endpoint (both singular and plural for compatibility)
+  app.post('/api/webhook/lead', async (req, res) => {
+    try {
+      const webhookData = webhookLeadSchema.parse(req.body);
+      
+      // Normalize phone number
+      const normalizedPhone = normalizePhoneNumber(webhookData.contact.phone);
+      
+      // Check for duplicate
+      const existingLead = await storage.getRecentLeads(1000);
+      const duplicate = existingLead.find(lead => 
+        lead.phone === normalizedPhone || 
+        (webhookData.contact.email && lead.email === webhookData.contact.email)
+      );
+      
+      if (duplicate) {
+        return res.json({ 
+          success: true, 
+          message: 'Duplicate lead detected',
+          qfCode: duplicate.qfCode 
+        });
+      }
+
+      // Auto-populate state from ZIP if missing
+      let state = webhookData.contact.state || '';
+      if (!state && webhookData.contact.zipCode) {
+        state = getStateFromZipCode(webhookData.contact.zipCode) || '';
+      }
+
+      if (!state) {
+        return res.status(400).json({ 
+          error: 'State required for TCPA compliance' 
+        });
+      }
+
+      // Generate unique QF code
+      let qfCode: string;
+      let isUnique = false;
+      do {
+        qfCode = generateQFCode();
+        const existing = await storage.getLeadByQfCode(qfCode);
+        isUnique = !existing;
+      } while (!isUnique);
+
+      // Create lead record
+      const lead = await storage.createLead({
+        qfCode,
+        firstName: webhookData.contact.firstName,
+        lastName: webhookData.contact.lastName,
+        email: webhookData.contact.email || '',
+        phone: normalizedPhone,
+        state: state,
+        zipCode: webhookData.contact.zipCode || '',
+        currentInsurer: webhookData.data.currentInsurer || '',
+        monthlyPremium: webhookData.data.monthlyPremium || '',
+        rawData: req.body
+      });
+
+      // Create driver records
+      if (webhookData.data.drivers) {
+        for (const driverData of webhookData.data.drivers) {
+          await storage.createDriver({
+            leadId: lead.id,
+            ...driverData
+          });
+        }
+      }
+
+      // Create vehicle records
+      if (webhookData.data.vehicles) {
+        for (const vehicleData of webhookData.data.vehicles) {
+          await storage.createVehicle({
+            leadId: lead.id,
+            ...vehicleData
+          });
+        }
+      }
+
+      // Schedule SMS follow-up after 2 minutes
+      setTimeout(async () => {
+        try {
+          await processLeadSMS(lead.id, 'followup');
+        } catch (error) {
+          console.error('Failed to send follow-up SMS:', error);
+        }
+      }, 2 * 60 * 1000);
+
+      // Broadcast new lead to connected clients
+      broadcastToClients('new_lead', { 
+        lead: { ...lead, drivers: [], vehicles: [], smsMessages: [] }
+      });
+
+      res.json({ success: true, qfCode, leadId: lead.id });
+    } catch (error) {
+      console.error('Webhook error:', error);
+      res.status(500).json({ error: 'Failed to process lead' });
+    }
+  });
+  
   app.post('/api/webhook/leads', async (req, res) => {
     try {
       const webhookData = webhookLeadSchema.parse(req.body);
