@@ -2,7 +2,7 @@ services:
   - type: web
     name: insurance-lead-tracker
     runtime: node
-    buildCommand: npm install && npm run build
+    buildCommand: npm ci && npm run build
     startCommand: npm start
     plan: starter
     envVars:
@@ -12,5 +12,5 @@ services:
         sync: false # This means you'll need to manually enter the value in Render dashboard
       - key: SESSION_SECRET
         generateValue: true
-    healthCheckPath: /
+    healthCheckPath: /health
     autoDeploy: true

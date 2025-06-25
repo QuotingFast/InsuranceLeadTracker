@@ -124,6 +124,24 @@ export async function registerRoutes(app: Express, server: Server): Promise<void
   startHourlyReports();
   startHealthChecks();
 
+  // Health check endpoint
+  app.get('/', (req, res) => {
+    res.json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      version: '1.0.0'
+    });
+  });
+
+  app.get('/health', (req, res) => {
+    res.json({ 
+      status: 'healthy', 
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      version: '1.0.0'
+    });
+  });
+
 
   // Lead webhook endpoint
   app.post('/api/webhook/lead', async (req, res) => {
