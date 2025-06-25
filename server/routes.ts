@@ -281,6 +281,58 @@ export async function registerRoutes(app: Express, server: Server): Promise<void
     }
   });
 
+  // Quote page endpoint
+  app.get('/api/quote/:qfCode', async (req, res) => {
+    try {
+      const { qfCode } = req.params;
+      const lead = await storage.getLeadByQfCode(qfCode);
+      
+      if (!lead) {
+        return res.status(404).json({ error: 'Quote not found' });
+      }
+
+      // Get drivers and vehicles for this lead
+      const drivers = await storage.getDriversByLeadId(lead.id);
+      const vehicles = await storage.getVehiclesByLeadId(lead.id);
+
+      // Track quote view
+      await storage.createQuoteView({
+        leadId: lead.id,
+        qfCode: lead.qfCode,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent') || ''
+      });
+
+      res.json({
+        ...lead,
+        drivers,
+        vehicles
+      });
+    } catch (error) {
+      console.error('Error fetching quote:', error);
+      res.status(500).json({ error: 'Failed to fetch quote' });
+    }
+  });
+
+  // Call tracking endpoint
+  app.post('/api/calls/track', async (req, res) => {
+    try {
+      const { leadId, qfCode, phoneNumber } = req.body;
+      
+      await storage.createCallTracking({
+        leadId,
+        qfCode,
+        phoneNumber,
+        callInitiated: true
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error tracking call:', error);
+      res.status(500).json({ error: 'Failed to track call' });
+    }
+  });
+
   // Additional API routes
   app.get('/api/leads/recent', async (req, res) => {
     try {
