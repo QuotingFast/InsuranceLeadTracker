@@ -110,11 +110,21 @@ export default function QuotePage() {
       <div className="bg-white shadow-sm border-b border-slate-200">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">
-                Your Personalized Quote
-              </h1>
-              <p className="text-slate-600 mt-1">Quote ID: {lead.qfCode}</p>
+            <div className="flex items-center gap-4">
+              <img 
+                src="https://quoteproauto.com/logo" 
+                alt="QuotePro Auto Logo" 
+                className="h-12 w-auto object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">
+                  Your Personalized Quote
+                </h1>
+                <p className="text-slate-600 mt-1">Quote ID: {lead.qfCode}</p>
+              </div>
             </div>
             <Badge variant="secondary" className="bg-blue-100 text-blue-800">
               <Clock className="h-3 w-3 mr-1" />

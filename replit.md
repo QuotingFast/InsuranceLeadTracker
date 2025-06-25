@@ -102,7 +102,9 @@ This is a full-stack web application built for insurance lead management and SMS
 
 Preferred communication style: Simple, everyday language.
 
-## Changelog
+## Recent Changes
 
-Changelog:
-- June 25, 2025. Initial setup
+- June 25, 2025: Initial insurance lead management platform setup
+- June 25, 2025: Integrated QuotePro Auto logo (https://quoteproauto.com/logo) in sidebar and quote pages
+- June 25, 2025: Configured Twilio SMS integration with user credentials
+- June 25, 2025: Deployed PostgreSQL database schema with all tables

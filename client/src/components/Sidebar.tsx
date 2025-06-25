@@ -92,8 +92,20 @@ export default function Sidebar({ isOpen, onClose, currentPage }: SidebarProps) 
     <>
       {/* Logo */}
       <div className="px-6 py-4 border-b border-slate-200">
-        <h1 className="text-xl font-bold text-blue-600">Quoting Fast</h1>
-        <p className="text-sm text-slate-500 mt-1">Lead Management</p>
+        <div className="flex items-center gap-3">
+          <img 
+            src="https://quoteproauto.com/logo" 
+            alt="QuotePro Auto Logo" 
+            className="h-8 w-auto object-contain"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+          <div>
+            <h1 className="text-xl font-bold text-blue-600">QuotePro Auto</h1>
+            <p className="text-sm text-slate-500 mt-1">Lead Management</p>
+          </div>
+        </div>
       </div>
 
       {/* Navigation */}
