@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <title>Your Auto Insurance Quote - QuotingFast</title>
+    
+    <!-- Ringba Dynamic Number Insertion -->
+    <script type="text/javascript">
+        // Ringba configuration based on lead data
+        const ringbaMap = {
+            insured_clean: {did:'+18889711908', script:'//b-js.ringba.com/CA134a8682c9e84d97a6fea1a0d2d4361f'},
+            insured_dui:   {did:'+18336503121', script:'//b-js.ringba.com/CAa0c48cb25286491b9e47f8b5afd6fbc7'},
+            uninsured:     {did:'+18336503121', script:'//b-js.ringba.com/CAa0c48cb25286491b9e47f8b5afd6fbc7'},
+            allstate:      {did:'+18336274480', script:'//b-js.ringba.com/CA5e3e25cc73184c00966cd53dc678fa72'}
+        };
+
+        // Lead data will be populated from webhook
+        let leadData = {
+            first_name: '',
+            last_name: '',
+            city: '',
+            state: '',
+            zip: '',
+            current_carrier: '',
+            insurance_status: '',
+            dui_status: '',
+            vehicles: [],
+            drivers: []
+        };
+
+        // Initialize Ringba based on lead data
+        function initializeRingba() {
+            let ringbaKey;
+            let phoneNumber;
+            let ringbaScript;
+
+            // Determine routing based on lead data
+            if (leadData.current_carrier && leadData.current_carrier.toLowerCase() === 'allstate') {
+                ringbaKey = 'allstate';
+            } else if (leadData.dui_status === 'yes') {
+                ringbaKey = 'insured_dui';
+            } else if (leadData.insurance_status === 'yes') {
+                ringbaKey = 'insured_clean';
+            } else {
+                ringbaKey = 'uninsured';
+            }
+
+            phoneNumber = ringbaMap[ringbaKey].did;
+            ringbaScript = ringbaMap[ringbaKey].script;
+
+            // Load Ringba script with parameters
+            loadRingbaScript(ringbaScript);
+            updateAllPhoneNumbers(phoneNumber);
+
+            return phoneNumber;
+        }
+
+        // Load Ringba tracking script
+        function loadRingbaScript(scriptURL) {
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryParams = [];
+
+            // Add tracking parameters
+            if (urlParams.get('fbclid')) queryParams.push(`fbclid=${encodeURIComponent(urlParams.get('fbclid'))}`);
+            if (urlParams.get('utm_source')) queryParams.push(`utm_source=${encodeURIComponent(urlParams.get('utm_source'))}`);
+            if (urlParams.get('utm_campaign')) queryParams.push(`utm_campaign=${encodeURIComponent(urlParams.get('utm_campaign'))}`);
+            if (leadData.state) queryParams.push(`state=${encodeURIComponent(leadData.state)}`);
+            if (leadData.insurance_status) queryParams.push(`insurance=${encodeURIComponent(leadData.insurance_status)}`);
+            if (leadData.dui_status) queryParams.push(`dui=${encodeURIComponent(leadData.dui_status)}`);
+
+            let finalScriptURL = scriptURL;
+            if (queryParams.length > 0) {
+                const separator = scriptURL.includes('?') ? '&' : '?';
+                finalScriptURL = `${scriptURL}${separator}${queryParams.join('&')}`;
+            }
+
+            const script = document.createElement('script');
+            script.src = finalScriptURL;
+            script.async = true;
+            document.body.appendChild(script);
+        }
+
+        // Update all phone numbers on the page
+        function updateAllPhoneNumbers(phoneNumber) {
+            // Update all tel: links
+            document.querySelectorAll('a[href^="tel:"]').forEach(link => {
+                link.href = `tel:${phoneNumber}`;
+                // Add click tracking
+                link.addEventListener('click', function() {
+                    trackPhoneClick(phoneNumber, this.getAttribute('data-button-type') || 'generic');
+                });
+            });
+
+            // Update any visible phone number displays
+            document.querySelectorAll('.phone-display').forEach(element => {
+                element.textContent = formatPhoneNumber(phoneNumber);
+            });
+        }
+
+        // Format phone number for display
+        function formatPhoneNumber(phone) {
+            const cleaned = phone.replace(/\D/g, '');
+            const match = cleaned.match(/^1?(\d{3})(\d{3})(\d{4})$/);
+            if (match) {
+                return match[1] + '-' + match[2] + '-' + match[3];
+            }
+            return phone;
+        }
+
+        // Track phone clicks
+        function trackPhoneClick(phoneNumber, buttonType) {
+            if (window._rgba_tags) {
+                window._rgba_tags.push({
+                    type: 'CallInitiated',
+                    phone_number: phoneNumber,
+                    button_type: buttonType,
+                    insurance_status: leadData.insurance_status,
+                    dui_status: leadData.dui_status,
+                    carrier: leadData.current_carrier,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        }
+    </script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        html, body {
+            width: 100%;
+            overflow-x: hidden;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            color: #212529;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            min-height: 100vh;
+        }
+
+        /* Alert Bar */
+        .alert-bar {
+            background: #dc3545;
+            color: white;
+            padding: 12px 15px;
+            font-weight: 700;
+            font-size: 14px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .alert-bar a {
+            color: white;
+            text-decoration: underline;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            height: 35px;
+            width: auto;
+        }
+
+        .call-btn {
+            background: #1a237e;
+            color: white;
+            padding: 10px 24px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .call-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Customer Section */
+        .customer-section {
+            background: white;
+            padding: 20px;
+            margin: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .quote-ref {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .customer-name {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1a237e;
+            margin-bottom: 12px;
+        }
+
+        .customer-info {
+            display: flex;
+            gap: 20px;
+            font-size: 16px;
+            color: #333;
+            flex-wrap: wrap;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .info-icon {
+            width: 20px;
+            height: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .info-icon svg {
+            width: 20px;
+            height: 20px;
+            fill: #1a237e;
+        }
+
+        /* Discount Banner */
+        .discount-banner {
+            background: #ffeaa7;
+            margin: 0 15px 15px;
+            padding: 20px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .discount-content h3 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ff6f00;
+            margin-bottom: 4px;
+        }
+
+        .discount-content p {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .claim-btn {
+            background: #ff6f00;
+            color: white;
+            padding: 12px 28px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 16px;
+            white-space: nowrap;
+        }
+
+        /* Info Cards */
+        .info-card {
+            background: white;
+            margin: 0 15px 15px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .card-header {
+            background: #1a237e;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .card-icon {
+            width: 24px;
+            height: 24px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .card-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
+
+        /* Vehicle List */
+        .vehicle-list {
+            padding: 20px;
+        }
+
+        .vehicle-item {
+            padding: 20px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 15px;
+        }
+
+        .vehicle-item:last-child {
+            border-bottom: none;
+        }
+
+        .vehicle-info h4 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #212529;
+            margin-bottom: 4px;
+        }
+
+        .vehicle-details {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .coverage-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-end;
+        }
+
+        .coverage-btn {
+            background: #4caf50;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            border: none;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+
+        .coverage-btn.basic {
+            background: #e0e0e0;
+            color: #666;
+        }
+
+        .coverage-btn.selected {
+            background: #4caf50;
+            color: white;
+        }
+
+        .coverage-btn.basic.selected {
+            background: #2196F3;
+            color: white;
+        }
+
+        /* Driver Grid */
+        .driver-grid {
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .driver-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .driver-name {
+            font-weight: 600;
+            font-size: 16px;
+            color: #212529;
+        }
+
+        .driver-status {
+            font-size: 14px;
+            color: #4caf50;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Bottom CTA */
+        .bottom-cta {
+            background: white;
+            margin: 15px;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            text-align: center;
+        }
+
+        .cta-text {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a237e;
+            margin-bottom: 8px;
+        }
+
+        .phone-display {
+            font-size: 24px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .cta-call-btn {
+            background: #dc3545;
+            color: white;
+            padding: 15px 40px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 18px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(220,53,69,0.3);
+        }
+
+        .cta-call-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 30px 20px;
+            max-width: 340px;
+            width: 100%;
+            text-align: center;
+            animation: modalSlide 0.3s ease-out;
+        }
+
+        @keyframes modalSlide {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 30px;
+            height: 30px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            color: #666;
+        }
+
+        .modal-icon {
+            width: 60px;
+            height: 60px;
+            background: #fff3e0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+        }
+        
+        .modal-icon svg {
+            width: 32px;
+            height: 32px;
+            fill: #ff6f00;
+        }
+
+        .modal h2 {
+            font-size: 24px;
+            color: #1a237e;
+            margin-bottom: 12px;
+        }
+
+        .modal p {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 24px;
+            line-height: 1.4;
+        }
+
+        .modal-btn {
+            background: #dc3545;
+            color: white;
+            padding: 14px 30px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 16px;
+            display: inline-block;
+            width: 100%;
+        }
+
+        /* Carriers Section */
+        .carriers-section {
+            text-align: center;
+            padding: 30px 15px;
+        }
+
+        .carriers-title {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+
+        .carrier-logos {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .carrier-logo {
+            height: 30px;
+            width: auto;
+            opacity: 0.6;
+            filter: grayscale(100%);
+        }
+
+        /* Footer */
+        .footer {
+            background: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+            border-top: 1px solid #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Alert Bar -->
+    <div class="alert-bar">
+        PENDING DISCOUNTS REQUIRE AGENT APPROVAL - CALL <a href="tel:+18889711908" data-button-type="alert">NOW</a>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <img src="https://quotingfast.com/qfqflogo.png" alt="QuotingFast" class="logo">
+        <a href="tel:+18889711908" class="call-btn" data-button-type="header">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/>
+            </svg>
+            Call
+        </a>
+    </header>
+
+    <!-- Customer Section -->
+    <section class="customer-section">
+        <div class="quote-ref">QUOTE REFERENCE: <span id="quoteId">QF-2025-DEMO</span></div>
+        <h1 class="customer-name" id="customerName">Jessenia Rodriguez</h1>
+        <div class="customer-info">
+            <div class="info-item">
+                <span class="info-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
+                </span>
+                <span id="location">Miami, FL 33101</span>
+            </div>
+            <div class="info-item">
+                <span class="info-icon">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>
+                    </svg>
+                </span>
+                <span id="currentCarrier">State Farm</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Discount Banner -->
+    <div class="discount-banner">
+        <div class="discount-content">
+            <h3>Additional Discounts Available!</h3>
+            <p>Multi-policy & loyalty savings pending</p>
+        </div>
+        <a href="tel:+18889711908" class="claim-btn" data-button-type="discount">Claim</a>
+    </div>
+
+    <!-- Vehicles Card -->
+    <div class="info-card">
+        <div class="card-header">
+            <span class="card-icon">
+                <svg viewBox="0 0 24 24">
+                    <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z"/>
+                </svg>
+            </span>
+            <span>Vehicles on Policy</span>
+        </div>
+        <div class="vehicle-list" id="vehicleList">
+            <!-- Vehicles will be populated here -->
+        </div>
+    </div>
+
+    <!-- Drivers Card -->
+    <div class="info-card">
+        <div class="card-header">
+            <span class="card-icon">
+                <svg viewBox="0 0 24 24">
+                    <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+                </svg>
+            </span>
+            <span>Licensed Drivers</span>
+        </div>
+        <div class="driver-grid" id="driverGrid">
+            <!-- Drivers will be populated here -->
+        </div>
+    </div>
+
+    <!-- Bottom CTA -->
+    <div class="bottom-cta">
+        <div class="cta-text">Ready to save?</div>
+        <div class="phone-display">888-971-1908</div>
+        <a href="tel:+18889711908" class="cta-call-btn" data-button-type="bottom">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 00-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/>
+            </svg>
+            Call Now
+        </a>
+    </div>
+
+    <!-- Carriers Section -->
+    <section class="carriers-section">
+        <p class="carriers-title">Partnered Insurance Carriers</p>
+        <div class="carrier-logos">
+            <img src="https://quoteproauto.com/Allstate.svg" alt="Allstate" class="carrier-logo">
+            <img src="https://quoteproauto.com/Progressive.svg" alt="Progressive" class="carrier-logo">
+            <img src="https://quoteproauto.com/statefarm.png" alt="State Farm" class="carrier-logo">
+            <img src="https://quoteproauto.com/Travelers.png" alt="Travelers" class="carrier-logo">
+            <img src="https://quoteproauto.com/farmers.png" alt="Farmers" class="carrier-logo">
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>© 2025 QuotingFast. All rights reserved.<br>
+        This quote is subject to underwriting approval.</p>
+    </footer>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="urgencyModal">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal()">×</button>
+            <div class="modal-icon">
+                <svg viewBox="0 0 24 24">
+                    <path d="M11 15h2v2h-2zm0-8h2v6h-2zm.99-5C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"/>
+                </svg>
+            </div>
+            <h2>Review Pending Discounts!</h2>
+            <p>Call now to review your pending discounts with a licensed agent and lock in your savings.</p>
+            <a href="tel:+18889711908" class="modal-btn" data-button-type="modal">Call Now</a>
+        </div>
+    </div>
+
+    <script>
+        // Track coverage selections
+        let coverageSelections = {};
+        let popupTimeout = null;
+        let popupShown = false;
+
+        // Function to handle coverage selection
+        function selectCoverage(vehicleId, coverageType) {
+            coverageSelections[vehicleId] = coverageType;
+            
+            // Update UI
+            const vehicleElement = document.querySelector(`[data-vehicle-id="${vehicleId}"]`);
+            const buttons = vehicleElement.querySelectorAll('.coverage-btn');
+            buttons.forEach(btn => {
+                btn.classList.remove('selected');
+                if (btn.getAttribute('data-coverage') === coverageType) {
+                    btn.classList.add('selected');
+                }
+            });
+            
+            // Check if all vehicles have coverage selected
+            const totalVehicles = document.querySelectorAll('.vehicle-item').length;
+            const selectedCount = Object.keys(coverageSelections).length;
+            
+            if (totalVehicles === selectedCount && !popupShown) {
+                // All coverage selected, show call modal immediately
+                clearTimeout(popupTimeout);
+                showModal();
+                popupShown = true;
+            }
+            
+            // Track selection
+            if (window._rgba_tags) {
+                window._rgba_tags.push({
+                    type: 'CoverageSelected',
+                    vehicle_id: vehicleId,
+                    coverage_type: coverageType,
+                    timestamp: new Date().toISOString()
+                });
+            }
+        }
+
+        // Show modal
+        function showModal() {
+            document.getElementById('urgencyModal').classList.add('active');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('urgencyModal').classList.remove('active');
+        }
+
+        // Get quote ID from URL
+        function getQuoteId() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('id') || 'QF-2025-DEMO';
+        }
+
+        // Load quote data
+        async function loadQuoteData(quoteId) {
+            // Check if quote data is embedded in the page
+            const embeddedData = document.getElementById('quoteData');
+            if (embeddedData) {
+                return JSON.parse(embeddedData.textContent);
+            }
+            
+            // Demo data
+            return {
+                quote_id: quoteId,
+                first_name: "Jessenia",
+                last_name: "Rodriguez",
+                city: "Miami",
+                state: "FL",
+                zip: "33101",
+                current_carrier: "State Farm",
+                insurance_status: "yes",
+                dui_status: "no",
+                vehicles: [
+                    {year: 2002, make: "Mazda", model: "B3000", vin: "1FTZR15E82TA04521", usage: "Personal"},
+                    {year: 2019, make: "Honda", model: "Civic", vin: "2HGFC2F59KH558934", usage: "Commute"}
+                ],
+                drivers: [
+                    {name: "Jessenia Rodriguez", type: "primary"},
+                    {name: "Valorie Rodriguez", type: "covered"},
+                    {name: "Rolf Rodriguez", type: "covered"},
+                    {name: "Dario Rodriguez", type: "covered"}
+                ]
+            };
+        }
+
+        // Populate page data
+        function populatePageData(data) {
+            leadData = data;
+            
+            // Update customer info
+            document.getElementById('quoteId').textContent = data.quote_id;
+            document.getElementById('customerName').textContent = `${data.first_name} ${data.last_name}`;
+            document.getElementById('location').textContent = `${data.city}, ${data.state} ${data.zip}`;
+            document.getElementById('currentCarrier').textContent = data.current_carrier || 'Not Specified';
+            
+            // Populate vehicles with coverage selectors
+            const vehicleList = document.getElementById('vehicleList');
+            vehicleList.innerHTML = data.vehicles.map((vehicle, index) => `
+                <div class="vehicle-item" data-vehicle-id="vehicle-${index}">
+                    <div class="vehicle-info">
+                        <h4>${vehicle.year} ${vehicle.make} ${vehicle.model}</h4>
+                        <div class="vehicle-details">VIN: ****${vehicle.vin.slice(-4)} • ${vehicle.usage}</div>
+                    </div>
+                    <div class="coverage-buttons">
+                        <button class="coverage-btn selected" data-coverage="full" onclick="selectCoverage('vehicle-${index}', 'full')">
+                            FULL COVERAGE
+                        </button>
+                        <button class="coverage-btn basic" data-coverage="basic" onclick="selectCoverage('vehicle-${index}', 'basic')">
+                            BASIC COVERAGE
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Populate drivers
+            const driverGrid = document.getElementById('driverGrid');
+            driverGrid.innerHTML = data.drivers.map(driver => `
+                <div class="driver-item">
+                    <div class="driver-name">${driver.name}</div>
+                    <div class="driver-status">✓ ${driver.type === 'primary' ? 'Primary' : 'Covered'}</div>
+                </div>
+            `).join('');
+            
+            // Initialize Ringba
+            const phoneNumber = initializeRingba();
+            window.currentPhoneNumber = phoneNumber;
+        }
+
+        // Initialize page
+        async function initializePage() {
+            const quoteId = getQuoteId();
+            
+            try {
+                const quoteData = await loadQuoteData(quoteId);
+                populatePageData(quoteData);
+                
+                // Set up 3-second timer for popup
+                popupTimeout = setTimeout(() => {
+                    if (!popupShown) {
+                        showModal();
+                        popupShown = true;
+                    }
+                }, 3000);
+                
+                // Exit intent for desktop
+                let exitShown = false;
+                document.addEventListener('mouseleave', function(e) {
+                    if (e.clientY <= 0 && !exitShown && !popupShown && window.innerWidth > 768) {
+                        showModal();
+                        exitShown = true;
+                        popupShown = true;
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Error loading quote data:', error);
+            }
+        }
+
+        // Close modal on backdrop click
+        document.getElementById('urgencyModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Initialize when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializePage);
+        } else {
+            initializePage();
+        }
+    </script>
+</body>
+</html>

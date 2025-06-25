@@ -1,85 +1,177 @@
-import { useRoute } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Phone, Mail, MapPin, Car, User, Shield, Clock, Star } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { useLocation } from 'wouter';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Phone, MapPin, Car, Users, Shield, Clock, CheckCircle } from 'lucide-react';
+import { apiRequest } from '@/lib/queryClient';
 
-interface Driver {
-  firstName: string;
-  lastName: string;
-  relationship: string;
-  licenseStatus: string;
-  education?: string;
-  occupation?: string;
-  violations: number;
-}
-
-interface Vehicle {
-  year: number;
-  make: string;
-  model: string;
-  submodel?: string;
-  primaryUse?: string;
-}
-
-interface Lead {
+interface QuoteData {
   id: number;
   qfCode: string;
   firstName: string;
   lastName: string;
-  email: string;
   phone: string;
-  address?: string;
+  email?: string;
   city: string;
   state: string;
-  zipCode: string;
+  zip: string;
   currentPolicy?: string;
-  requestedCoverageType?: string;
-  drivers: Driver[];
-  vehicles: Vehicle[];
+  drivers: Array<{
+    age: number;
+    yearsOfExperience: number;
+    violations: number;
+    relationshipToLead: string;
+  }>;
+  vehicles: Array<{
+    year: number;
+    make: string;
+    model: string;
+  }>;
   createdAt: string;
 }
 
+interface RingbaMapping {
+  phoneNumber: string;
+  scriptUrl: string;
+}
+
 export default function QuotePage() {
-  const [, params] = useRoute("/quote/:qfCode");
-  const qfCode = params?.qfCode;
+  const [, setLocation] = useLocation();
+  const [quoteData, setQuoteData] = useState<QuoteData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [callNumber, setCallNumber] = useState<string>('');
+  const [showPopup, setShowPopup] = useState(false);
 
-  const { data: lead, isLoading, error } = useQuery({
-    queryKey: [`/api/quote/${qfCode}`],
-    enabled: !!qfCode,
-  });
+  // Extract QF code from URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const qfCode = urlParams.get('qf') || window.location.pathname.split('/').pop();
 
-  const handleCallNow = () => {
-    if (lead) {
-      // Track call conversion
-      fetch('/api/calls/track', {
+  // Ringba phone number mappings based on lead profile
+  const getRingbaMapping = (quote: QuoteData): RingbaMapping => {
+    const ringbaMap = {
+      insured_clean: { phoneNumber: '+18889711908', scriptUrl: '//b-js.ringba.com/CA134a8682c9e84d97a6fea1a0d2d4361f' },
+      insured_dui: { phoneNumber: '+18336503121', scriptUrl: '//b-js.ringba.com/CAa0c48cb25286491b9e47f8b5afd6fbc7' },
+      uninsured: { phoneNumber: '+18336503121', scriptUrl: '//b-js.ringba.com/CAa0c48cb25286491b9e47f8b5afd6fbc7' },
+      allstate: { phoneNumber: '+18336274480', scriptUrl: '//b-js.ringba.com/CA5e3e25cc73184c00966cd53dc678fa72' }
+    };
+
+    // Determine routing based on lead data
+    if (quote.currentPolicy && quote.currentPolicy.toLowerCase().includes('allstate')) {
+      return ringbaMap.allstate;
+    } else if (quote.drivers.some(d => d.violations > 0)) {
+      return ringbaMap.insured_dui;
+    } else if (quote.currentPolicy) {
+      return ringbaMap.insured_clean;
+    } else {
+      return ringbaMap.uninsured;
+    }
+  };
+
+  const formatPhoneNumber = (phone: string) => {
+    const cleaned = phone.replace(/\D/g, '');
+    const match = cleaned.match(/^1?(\d{3})(\d{3})(\d{4})$/);
+    if (match) {
+      return `${match[1]}-${match[2]}-${match[3]}`;
+    }
+    return phone;
+  };
+
+  const trackQuoteView = async (qfCode: string) => {
+    try {
+      await apiRequest('/api/quotes/view', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          leadId: lead.id,
-          qfCode: lead.qfCode,
-          phoneNumber: lead.phone
-        })
+        body: { qfCode }
       });
-      
-      // Initiate call
-      window.location.href = `tel:+19547905093`;
+    } catch (error) {
+      console.warn('Failed to track quote view:', error);
     }
   };
 
-  const handleEmailQuote = () => {
-    if (lead) {
-      const subject = `Your Auto Insurance Quote - ${lead.qfCode}`;
-      const body = `Hi ${lead.firstName},\n\nThank you for your interest in auto insurance. We've prepared a competitive quote for you.\n\nQuote Reference: ${lead.qfCode}\n\nCall us at (954) 790-5093 to discuss your options and get instant coverage.\n\nBest regards,\nQuotePro Auto Insurance`;
-      
-      window.location.href = `mailto:${lead.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  const trackPhoneClick = async (phoneNumber: string, buttonType: string) => {
+    try {
+      await apiRequest('/api/calls/track', {
+        method: 'POST',
+        body: { 
+          qfCode: quoteData?.qfCode, 
+          phoneNumber, 
+          buttonType,
+          timestamp: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.warn('Failed to track phone click:', error);
     }
   };
 
-  if (isLoading) {
+  const handleCallClick = (buttonType: string) => {
+    if (callNumber) {
+      trackPhoneClick(callNumber, buttonType);
+      window.location.href = `tel:${callNumber}`;
+    }
+  };
+
+  const loadRingbaScript = (scriptUrl: string, quote: QuoteData) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryParams = [];
+
+    // Add tracking parameters
+    if (urlParams.get('fbclid')) queryParams.push(`fbclid=${encodeURIComponent(urlParams.get('fbclid'))}`);
+    if (urlParams.get('utm_source')) queryParams.push(`utm_source=${encodeURIComponent(urlParams.get('utm_source'))}`);
+    if (urlParams.get('utm_campaign')) queryParams.push(`utm_campaign=${encodeURIComponent(urlParams.get('utm_campaign'))}`);
+    if (quote.state) queryParams.push(`state=${encodeURIComponent(quote.state)}`);
+    if (quote.currentPolicy) queryParams.push(`insurance=yes`);
+
+    let finalScriptUrl = scriptUrl;
+    if (queryParams.length > 0) {
+      const separator = scriptUrl.includes('?') ? '&' : '?';
+      finalScriptUrl = `${scriptUrl}${separator}${queryParams.join('&')}`;
+    }
+
+    const script = document.createElement('script');
+    script.src = finalScriptUrl;
+    script.async = true;
+    document.body.appendChild(script);
+  };
+
+  useEffect(() => {
+    if (!qfCode) {
+      setError('Invalid quote code');
+      setLoading(false);
+      return;
+    }
+
+    const fetchQuoteData = async () => {
+      try {
+        const response = await apiRequest(`/api/quotes/${qfCode}`);
+        setQuoteData(response);
+        
+        // Track quote view
+        await trackQuoteView(qfCode);
+        
+        // Initialize Ringba
+        const ringbaMapping = getRingbaMapping(response);
+        setCallNumber(ringbaMapping.phoneNumber);
+        loadRingbaScript(ringbaMapping.scriptUrl, response);
+        
+        // Show popup after 3 seconds
+        setTimeout(() => setShowPopup(true), 3000);
+        
+      } catch (error) {
+        console.error('Failed to fetch quote data:', error);
+        setError('Quote not found or expired');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchQuoteData();
+  }, [qfCode]);
+
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading your quote...</p>
@@ -88,18 +180,21 @@ export default function QuotePage() {
     );
   }
 
-  if (error || !lead) {
+  if (error || !quoteData) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center">
-        <Card className="max-w-md mx-auto">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="max-w-md w-full mx-4">
           <CardContent className="text-center p-8">
-            <h1 className="text-2xl font-bold text-gray-800 mb-4">Quote Not Found</h1>
+            <h1 className="text-2xl font-bold text-red-600 mb-4">Quote Not Found</h1>
             <p className="text-gray-600 mb-6">
-              We couldn't find a quote with the code: {qfCode}
+              We couldn't find your quote. Please check your link or contact support.
             </p>
-            <Button onClick={() => window.location.href = 'tel:+19547905093'} className="w-full">
-              <Phone className="h-4 w-4 mr-2" />
-              Call for Assistance
+            <Button 
+              onClick={() => window.location.href = 'tel:+18557283669'}
+              className="w-full bg-red-600 hover:bg-red-700"
+            >
+              <Phone className="mr-2 h-4 w-4" />
+              Call Support: 1-855-728-3669
             </Button>
           </CardContent>
         </Card>
@@ -108,228 +203,206 @@ export default function QuotePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <img 
-                src="https://quoteproauto.com/logo" 
-                alt="QuotePro Auto" 
-                className="h-10 w-auto"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Your Auto Insurance Quote</h1>
-                <p className="text-sm text-gray-600">Quote ID: {lead.qfCode}</p>
-              </div>
-            </div>
-            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-              Active Quote
-            </Badge>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Alert Bar */}
+      <div className="bg-red-600 text-white p-3 text-center font-bold text-sm uppercase tracking-wide">
+        This is a temporary development preview, check there are no live public site. Contact our help for secure sharing of use on their live.
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Lead Information */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <User className="h-5 w-5" />
-              <span>Contact Information</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <User className="h-4 w-4 text-gray-500" />
-                <span className="font-medium">{lead.firstName} {lead.lastName}</span>
+      {/* Header */}
+      <header className="bg-white shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+          <img 
+            src="https://quoteproauto.com/logo" 
+            alt="QuotePro Auto" 
+            className="h-8"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjMyIiB2aWV3Qm94PSIwIDAgMTIwIDMyIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjx0ZXh0IHg9IjEwIiB5PSIyMCIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0iIzFhMjM3ZSI+UXVvdGVQcm8gQXV0bzwvdGV4dD48L3N2Zz4=';
+            }}
+          />
+          <Button 
+            onClick={() => handleCallClick('header')}
+            className="bg-indigo-900 hover:bg-indigo-800 text-white px-6 py-2 rounded-full font-semibold"
+          >
+            <Phone className="mr-2 h-4 w-4" />
+            Call Now
+          </Button>
+        </div>
+      </header>
+
+      <div className="max-w-4xl mx-auto p-4 space-y-4">
+        {/* Customer Section */}
+        <Card>
+          <CardContent className="p-6">
+            <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">
+              Quote Reference: {quoteData.qfCode}
+            </p>
+            <h1 className="text-3xl font-bold text-indigo-900 mb-4">
+              {quoteData.firstName} {quoteData.lastName}
+            </h1>
+            <div className="flex flex-wrap gap-6 text-gray-600">
+              <div className="flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-indigo-900" />
+                <span>{quoteData.city}, {quoteData.state} {quoteData.zip}</span>
               </div>
-              <div className="flex items-center space-x-3">
-                <Phone className="h-4 w-4 text-gray-500" />
-                <span>{lead.phone}</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <Mail className="h-4 w-4 text-gray-500" />
-                <span>{lead.email}</span>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <MapPin className="h-4 w-4 text-gray-500" />
-                <span>
-                  {lead.address && `${lead.address}, `}
-                  {lead.city}, {lead.state} {lead.zipCode}
-                </span>
-              </div>
-              {lead.currentPolicy && (
-                <div className="flex items-center space-x-3">
-                  <Shield className="h-4 w-4 text-gray-500" />
-                  <span>Current Provider: {lead.currentPolicy}</span>
-                </div>
-              )}
-              {!lead.currentPolicy && (
-                <div className="flex items-center space-x-3">
-                  <Shield className="h-4 w-4 text-red-500" />
-                  <span className="text-red-600 font-medium">Currently Uninsured</span>
+              {quoteData.currentPolicy && (
+                <div className="flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-indigo-900" />
+                  <span>Current: {quoteData.currentPolicy}</span>
                 </div>
               )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Drivers */}
-        {lead.drivers && lead.drivers.length > 0 && (
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <User className="h-5 w-5" />
-                <span>Drivers ({lead.drivers.length})</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {lead.drivers.map((driver, index) => (
-                <div key={index} className="border rounded-lg p-4 bg-gray-50">
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <div>
-                      <p className="font-medium">{driver.firstName} {driver.lastName}</p>
-                      <p className="text-sm text-gray-600">{driver.relationship}</p>
-                      <p className="text-sm text-gray-600">License: {driver.licenseStatus}</p>
-                    </div>
-                    <div>
-                      {driver.education && (
-                        <p className="text-sm text-gray-600">Education: {driver.education}</p>
-                      )}
-                      {driver.occupation && (
-                        <p className="text-sm text-gray-600">Occupation: {driver.occupation}</p>
-                      )}
-                    </div>
-                    <div>
-                      <Badge 
-                        variant={driver.violations === 0 ? "default" : "destructive"}
-                        className="text-xs"
-                      >
-                        {driver.violations === 0 ? "Clean Record" : `${driver.violations} Violations`}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Vehicles */}
-        {lead.vehicles && lead.vehicles.length > 0 && (
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Car className="h-5 w-5" />
-                <span>Vehicles ({lead.vehicles.length})</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {lead.vehicles.map((vehicle, index) => (
-                <div key={index} className="border rounded-lg p-4 bg-gray-50">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <p className="font-medium">
-                        {vehicle.year} {vehicle.make} {vehicle.model}
-                        {vehicle.submodel && ` ${vehicle.submodel}`}
-                      </p>
-                      {vehicle.primaryUse && (
-                        <p className="text-sm text-gray-600">Primary Use: {vehicle.primaryUse}</p>
-                      )}
-                    </div>
-                    <div className="flex justify-end">
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                        {vehicle.year >= 2020 ? "Recent Model" : "Older Model"}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Call to Action */}
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card className="border-2 border-green-200 bg-green-50">
-            <CardContent className="p-6 text-center">
-              <div className="mb-4">
-                <Phone className="h-12 w-12 text-green-600 mx-auto mb-3" />
-                <h3 className="text-xl font-bold text-green-800 mb-2">Get Your Quote Now</h3>
-                <p className="text-green-700 text-sm mb-4">
-                  Speak with our licensed agents for instant rates and immediate coverage
-                </p>
-                <div className="flex items-center justify-center space-x-2 text-green-600 mb-4">
-                  <Star className="h-4 w-4 fill-current" />
-                  <Star className="h-4 w-4 fill-current" />
-                  <Star className="h-4 w-4 fill-current" />
-                  <Star className="h-4 w-4 fill-current" />
-                  <Star className="h-4 w-4 fill-current" />
-                  <span className="text-sm font-medium">5.0 Rating</span>
-                </div>
-              </div>
-              <Button 
-                onClick={handleCallNow} 
-                className="w-full bg-green-600 hover:bg-green-700 text-white text-lg py-3"
-                size="lg"
-              >
-                <Phone className="h-5 w-5 mr-2" />
-                Call (954) 790-5093
-              </Button>
-              <p className="text-xs text-green-600 mt-2">
-                Available 24/7 • Licensed Agents • Instant Quotes
+        {/* Discount Banner */}
+        <Card className="bg-yellow-100 border-yellow-300">
+          <CardContent className="p-6 flex justify-between items-center">
+            <div>
+              <h3 className="text-xl font-bold text-orange-600 mb-1">
+                Save Up To $1,200 Annually!
+              </h3>
+              <p className="text-gray-600 text-sm">
+                Additional discounts require agent approval
               </p>
-            </CardContent>
-          </Card>
+            </div>
+            <Button 
+              onClick={() => handleCallClick('discount')}
+              className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-full font-bold whitespace-nowrap"
+            >
+              Claim Savings
+            </Button>
+          </CardContent>
+        </Card>
 
+        {/* Vehicles Section */}
+        {quoteData.vehicles && quoteData.vehicles.length > 0 && (
           <Card>
-            <CardContent className="p-6 text-center">
-              <div className="mb-4">
-                <Mail className="h-12 w-12 text-blue-600 mx-auto mb-3" />
-                <h3 className="text-xl font-bold text-gray-800 mb-2">Email Quote Details</h3>
-                <p className="text-gray-600 text-sm mb-4">
-                  Get your personalized quote details sent directly to your inbox
-                </p>
-                <div className="flex items-center justify-center space-x-2 text-gray-500 mb-4">
-                  <Clock className="h-4 w-4" />
-                  <span className="text-sm">Instant delivery</span>
-                </div>
+            <CardHeader className="bg-indigo-900 text-white">
+              <CardTitle className="flex items-center gap-3">
+                <Car className="h-6 w-6" />
+                Covered Vehicles
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-6">
+                {quoteData.vehicles.map((vehicle, index) => (
+                  <div key={index} className="flex justify-between items-start border-b pb-4 last:border-b-0">
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 mb-1">
+                        {vehicle.year} {vehicle.make} {vehicle.model}
+                      </h4>
+                      <p className="text-sm text-gray-600">Personal Vehicle</p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Badge variant="secondary" className="bg-green-100 text-green-800">
+                        Full Coverage
+                      </Badge>
+                      <Badge variant="outline" className="text-blue-600 border-blue-300">
+                        Liability
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <Button 
-                onClick={handleEmailQuote} 
-                variant="outline" 
-                className="w-full border-blue-300 text-blue-600 hover:bg-blue-50 text-lg py-3"
-                size="lg"
-              >
-                <Mail className="h-5 w-5 mr-2" />
-                Email Quote
-              </Button>
-              <p className="text-xs text-gray-500 mt-2">
-                No spam • Secure delivery • Detailed breakdown
-              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Drivers Section */}
+        {quoteData.drivers && quoteData.drivers.length > 0 && (
+          <Card>
+            <CardHeader className="bg-indigo-900 text-white">
+              <CardTitle className="flex items-center gap-3">
+                <Users className="h-6 w-6" />
+                Covered Drivers
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {quoteData.drivers.map((driver, index) => (
+                  <div key={index} className="space-y-1">
+                    <p className="font-semibold text-gray-900">
+                      {driver.relationshipToLead === 'primary' ? `${quoteData.firstName} ${quoteData.lastName}` : `Driver ${index + 1}`}
+                    </p>
+                    <div className="flex items-center gap-2 text-sm text-green-600">
+                      <CheckCircle className="h-4 w-4" />
+                      <span>
+                        {driver.violations === 0 ? 'Clean Record' : `${driver.violations} Violation${driver.violations > 1 ? 's' : ''}`}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      {driver.yearsOfExperience} years experience • Age {driver.age}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Bottom CTA */}
+        <Card className="bg-white">
+          <CardContent className="p-8 text-center">
+            <h2 className="text-2xl font-semibold text-indigo-900 mb-2">
+              Ready to Activate Your Quote?
+            </h2>
+            <p className="text-xl text-gray-600 mb-6">
+              {formatPhoneNumber(callNumber)}
+            </p>
+            <Button 
+              onClick={() => handleCallClick('bottom')}
+              size="lg"
+              className="bg-red-600 hover:bg-red-700 text-white px-10 py-4 text-lg font-bold rounded-full"
+            >
+              <Phone className="mr-3 h-5 w-5" />
+              Call To Activate Quote
+            </Button>
+            <p className="text-xs text-gray-500 mt-4">
+              Quote expires {new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Popup Modal */}
+      {showPopup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <Card className="max-w-md w-full">
+            <CardContent className="p-8 text-center">
+              <div className="mb-4">
+                <Clock className="h-12 w-12 text-orange-600 mx-auto mb-4" />
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  Limited Time Offer!
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Your quote is ready for activation. Call now to secure these savings before they expire.
+                </p>
+              </div>
+              <div className="space-y-3">
+                <Button 
+                  onClick={() => {
+                    setShowPopup(false);
+                    handleCallClick('popup');
+                  }}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white py-3 text-lg font-bold"
+                >
+                  <Phone className="mr-2 h-5 w-5" />
+                  Call Now: {formatPhoneNumber(callNumber)}
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => setShowPopup(false)}
+                  className="w-full"
+                >
+                  Close
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
-
-        {/* Quote Created Date */}
-        <div className="text-center mt-8 text-sm text-gray-500">
-          Quote created on {new Date(lead.createdAt).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          })}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
