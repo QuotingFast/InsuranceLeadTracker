@@ -260,14 +260,14 @@ export async function registerRoutes(app: Express, server: Server): Promise<void
         }
       }
 
-      // Schedule SMS follow-up after 2 minutes
-      setTimeout(async () => {
-        try {
-          await processLeadSMS(lead.id, 'followup');
-        } catch (error) {
-          console.error('Failed to send follow-up SMS:', error);
-        }
-      }, 2 * 60 * 1000);
+      // SMS follow-up disabled - only send when explicitly requested
+      // setTimeout(async () => {
+      //   try {
+      //     await processLeadSMS(lead.id, 'followup');
+      //   } catch (error) {
+      //     console.error('Failed to send follow-up SMS:', error);
+      //   }
+      // }, 2 * 60 * 1000);
 
       // Broadcast new lead to connected clients
       broadcastToClients('new_lead', { 
