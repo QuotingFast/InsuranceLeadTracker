@@ -354,6 +354,99 @@ export async function registerRoutes(app: Express, server: Server): Promise<void
     }
   });
 
+  // Get quote data by QF code
+  app.get('/api/quotes/:qfCode', async (req, res) => {
+    try {
+      const { qfCode } = req.params;
+      
+      if (!qfCode || !qfCode.startsWith('QF')) {
+        return res.status(400).json({ error: 'Invalid quote code' });
+      }
+
+      const lead = await storage.getLeadByQfCode(qfCode);
+      if (!lead) {
+        return res.status(404).json({ error: 'Quote not found or expired' });
+      }
+
+      // Get additional details
+      const leadWithDetails = await storage.getLeadWithDetails(lead.id);
+      if (!leadWithDetails) {
+        return res.status(404).json({ error: 'Quote details not found' });
+      }
+
+      res.json(leadWithDetails);
+    } catch (error) {
+      console.error('Error fetching quote:', error);
+      res.status(500).json({ error: 'Failed to fetch quote' });
+    }
+  });
+
+  // Track quote view
+  app.post('/api/quotes/view', async (req, res) => {
+    try {
+      const { qfCode } = req.body;
+      
+      if (!qfCode) {
+        return res.status(400).json({ error: 'QF code is required' });
+      }
+
+      const lead = await storage.getLeadByQfCode(qfCode);
+      if (!lead) {
+        return res.status(404).json({ error: 'Quote not found' });
+      }
+
+      // Create quote view record
+      await storage.createQuoteView({
+        leadId: lead.id,
+        userAgent: req.headers['user-agent'] || 'Unknown',
+        ipAddress: req.ip || req.connection.remoteAddress || 'Unknown'
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error tracking quote view:', error);
+      res.status(500).json({ error: 'Failed to track view' });
+    }
+  });
+
+  // Track phone call
+  app.post('/api/calls/track', async (req, res) => {
+    try {
+      const { qfCode, phoneNumber, buttonType, timestamp } = req.body;
+      
+      if (!qfCode || !phoneNumber) {
+        return res.status(400).json({ error: 'QF code and phone number are required' });
+      }
+
+      const lead = await storage.getLeadByQfCode(qfCode);
+      if (!lead) {
+        return res.status(404).json({ error: 'Quote not found' });
+      }
+
+      // Create call tracking record
+      await storage.createCallTracking({
+        leadId: lead.id,
+        phoneNumber,
+        buttonType: buttonType || 'generic',
+        userAgent: req.headers['user-agent'] || 'Unknown',
+        ipAddress: req.ip || req.connection.remoteAddress || 'Unknown'
+      });
+
+      // Broadcast call tracking to connected clients
+      broadcastToClients('call_tracked', {
+        qfCode,
+        phoneNumber,
+        buttonType,
+        timestamp: timestamp || new Date().toISOString()
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error tracking call:', error);
+      res.status(500).json({ error: 'Failed to track call' });
+    }
+  });
+
   app.post('/api/sms/custom', async (req, res) => {
     try {
       const { phoneNumber, message } = customSmsSchema.parse(req.body);

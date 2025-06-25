@@ -27,6 +27,7 @@ function Router() {
       <Route path="/compliance" component={CompliancePage} />
       <Route path="/optouts" component={OptOutsPage} />
       <Route path="/quote/:qfCode" component={QuotePage} />
+      <Route path="/quote" component={QuotePage} />
       <Route component={NotFound} />
     </Switch>
   );
