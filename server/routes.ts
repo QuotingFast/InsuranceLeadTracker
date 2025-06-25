@@ -23,7 +23,7 @@ import {
   getStateFromZipCode,
   isEmergencyStopActive 
 } from "./services/compliance";
-import { sendAdminNotification } from "./services/notifications";
+import { sendAdminNotification, startHourlyReports, startHealthChecks } from "./services/notifications";
 
 let wsConnections = new Set<WebSocket>();
 
@@ -103,28 +103,12 @@ function broadcastToClients(type: string, data: any) {
   });
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  const server = app.listen(5000, "0.0.0.0", () => {
-    console.log("Server running on port 5000");
-  });
+export async function registerRoutes(app: Express): Promise<void> {
 
-  // WebSocket setup
-  const wss = new WebSocketServer({ server: server, path: '/ws' });
-  
-  wss.on('connection', (ws) => {
-    console.log('WebSocket client connected');
-    wsConnections.add(ws);
-    
-    ws.on('close', () => {
-      wsConnections.delete(ws);
-      console.log('WebSocket client disconnected');
-    });
-    
-    ws.on('error', (error) => {
-      console.error('WebSocket error:', error);
-      wsConnections.delete(ws);
-    });
-  });
+  // Start background services
+  startHourlyReports();
+  startHealthChecks();
+
 
   // Lead webhook endpoint
   app.post('/api/webhook/lead', async (req, res) => {
@@ -339,5 +323,5 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  return server;
+
 }
