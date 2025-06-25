@@ -4,7 +4,13 @@ services:
     runtime: node
     buildCommand: npm install && npm run build
     startCommand: npm start
+    plan: starter
     envVars:
       - key: NODE_ENV
         value: production
-    plan: starter
+      - key: DATABASE_URL
+        sync: false # This means you'll need to manually enter the value in Render dashboard
+      - key: SESSION_SECRET
+        generateValue: true
+    healthCheckPath: /
+    autoDeploy: true
