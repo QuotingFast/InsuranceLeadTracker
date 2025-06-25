@@ -514,9 +514,11 @@ export async function registerRoutes(app: Express, server: Server): Promise<void
 
         res.json({ success: true, messageSid: result.messageSid });
       } else {
+        console.error('❌ SMS failed:', result);
         res.status(400).json({ 
           error: 'Failed to send SMS',
-          details: result.errorMessage 
+          details: result.errorMessage,
+          errorCode: result.errorCode 
         });
       }
 
