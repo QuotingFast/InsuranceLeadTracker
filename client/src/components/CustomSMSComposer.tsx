@@ -181,7 +181,7 @@ export default function CustomSMSComposer() {
             />
             <div className="flex justify-between mt-1">
               <span className="text-xs text-slate-500">
-                Use {"{name}"}, {"{quote_link}"} for personalization
+                Opt-out text "Reply STOP to opt out" automatically added if not included
               </span>
               <span className={`text-xs ${messageLength > maxLength * 0.9 ? 'text-red-500' : 'text-slate-500'}`}>
                 {messageLength}/{maxLength}
