@@ -492,6 +492,7 @@ export async function registerRoutes(app: Express, server: Server): Promise<void
       console.log('SMS Result:', result);
       
       if (result.success) {
+        console.log('✅ SMS sent successfully!', result.messageSid);
         // Log the SMS in database if we have a matching lead
         try {
           const recentLeads = await storage.getRecentLeads(1000);
