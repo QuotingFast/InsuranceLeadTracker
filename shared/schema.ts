@@ -99,7 +99,7 @@ export const drivers = pgTable("drivers", {
 // Enhanced vehicles table for comprehensive vehicle data
 export const vehicles = pgTable("vehicles", {
   id: serial("id").primaryKey(),
-  leadId: integer("leadId").notNull().references(() => leads.id, { onDelete: "cascade" }),
+  leadId: integer("lead_id").notNull().references(() => leads.id, { onDelete: "cascade" }),
   year: integer("year").notNull(),
   make: text("make").notNull(),
   model: text("model").notNull(),
@@ -161,7 +161,7 @@ export const suppressionList = pgTable("suppression_list", {
 
 export const quoteViews = pgTable("quote_views", {
   id: serial("id").primaryKey(),
-  leadId: integer("leadId").notNull().references(() => leads.id, { onDelete: "cascade" }),
+  leadId: integer("lead_id").notNull().references(() => leads.id, { onDelete: "cascade" }),
   qfCode: text("qf_code").notNull(),
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
@@ -170,7 +170,7 @@ export const quoteViews = pgTable("quote_views", {
 
 export const callTracking = pgTable("call_tracking", {
   id: serial("id").primaryKey(),
-  leadId: integer("leadId").notNull().references(() => leads.id, { onDelete: "cascade" }),
+  leadId: integer("lead_id").notNull().references(() => leads.id, { onDelete: "cascade" }),
   qfCode: text("qf_code").notNull(),
   phoneNumber: text("phone_number").notNull(),
   callStarted: boolean("call_started").default(false),
