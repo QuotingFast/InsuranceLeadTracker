@@ -56,8 +56,9 @@ app.use((req, res, next) => {
   }
 
   /* -------- start the server -------- */
-  const PORT = process.env.PORT ? Number(process.env.PORT) : 5000;
-  server.listen(PORT, "0.0.0.0", () => {
+  // Use Replit's PORT, or REPLIT_PORT environment variables if available, otherwise fallback to 3000
+  const PORT = process.env.PORT || process.env.REPLIT_PORT || 3000;
+  server.listen(Number(PORT), "0.0.0.0", () => {
     console.log(`Server running on :${PORT}`);
     console.log(`http://localhost:${PORT}`);
   });

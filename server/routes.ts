@@ -3,6 +3,8 @@ import { Express } from "express";
 import { Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { z } from "zod";
+import path from "path";
+import fs from "fs";
 import { 
   webhookLeadSchema, 
   customSmsSchema,
@@ -182,10 +184,10 @@ export async function registerRoutes(app: Express, server: Server): Promise<void
         zipCode: webhookData.contact.zip_code || '',
         ipAddress: webhookData.contact.ip_address,
         leadIdCode: webhookData.meta?.lead_id_code,
-        campaignId: webhookData.campaign_id,
+        campaignId: webhookData.campaign_id ? Number(webhookData.campaign_id) : undefined,
         offerId: webhookData.meta?.offer_id,
         sourceId: webhookData.meta?.source_id,
-        sellPrice: webhookData.sell_price,
+        sellPrice: webhookData.sell_price ? String(webhookData.sell_price) : undefined,
         landingPageUrl: webhookData.meta?.landing_page_url,
         userAgent: webhookData.meta?.user_agent,
         currentPolicy: webhookData.data.current_policy,
@@ -354,7 +356,55 @@ export async function registerRoutes(app: Express, server: Server): Promise<void
     }
   });
 
-  // Get quote data by QF code
+  // HTML endpoint to serve the standalone quote page
+  app.get('/quote/:qfCode', async (req, res) => {
+    try {
+      const { qfCode } = req.params;
+      
+      // Get lead data
+      const lead = await storage.getLeadByQfCode(qfCode);
+      if (!lead) {
+        return res.status(404).send('Quote not found or expired');
+      }
+      
+      // Get additional data
+      const drivers = await storage.getDriversByLeadId(lead.id);
+      const vehicles = await storage.getVehiclesByLeadId(lead.id);
+      
+      // Track the quote view
+      await storage.createQuoteView({
+        leadId: lead.id,
+        qfCode, // Include qfCode parameter as required
+        userAgent: req.headers['user-agent'] || 'Unknown',
+        ipAddress: req.ip || req.connection.remoteAddress || 'Unknown'
+      });
+      
+      // Redirect to the React quote page with the QF code
+      // Using canonical path format that matches the React router configuration
+      res.redirect(`/quote/${qfCode}`);
+    } catch (error) {
+      console.error('Error serving quote page:', error);
+      res.status(500).send('Error generating quote page');
+    }
+  });
+  
+  // Added: Support for legacy webhook format that uses "id" parameter instead of "qf"
+  app.get('/quote', async (req, res) => {
+    try {
+      const qfCode = req.query.id || req.query.qf;
+      
+      if (!qfCode) {
+        return res.status(400).send('Missing quote ID');
+      }
+      
+      // Redirect to the canonical URL format
+      return res.redirect(`/quote/${qfCode}`);
+    } catch (error) {
+      console.error('Error in quote redirect:', error);
+      res.status(500).send('Server error');
+    }
+  });
+  // API endpoint to get lead by QF code with associated drivers and vehicles
   app.get('/api/quotes/:qfCode', async (req, res) => {
     try {
       const { qfCode } = req.params;
@@ -398,6 +448,7 @@ export async function registerRoutes(app: Express, server: Server): Promise<void
       // Create quote view record
       await storage.createQuoteView({
         leadId: lead.id,
+        qfCode, // Add missing qfCode parameter
         userAgent: req.headers['user-agent'] || 'Unknown',
         ipAddress: req.ip || req.connection.remoteAddress || 'Unknown'
       });
@@ -426,8 +477,9 @@ export async function registerRoutes(app: Express, server: Server): Promise<void
       // Create call tracking record
       await storage.createCallTracking({
         leadId: lead.id,
+        qfCode, // Add required qfCode parameter
         phoneNumber,
-        buttonType: buttonType || 'generic',
+        // Remove buttonType as it's not in the type definition
         userAgent: req.headers['user-agent'] || 'Unknown',
         ipAddress: req.ip || req.connection.remoteAddress || 'Unknown'
       });
