@@ -220,7 +220,7 @@ export const webhookLeadSchema = z.object({
       yearsOfExperience: z.number(),
       violations: z.number().default(0),
       relationshipToLead: z.string(),
-      licenseStatus: z.string(),
+      licenseStatus: z.string().optional(),
     })).optional(),
     vehicles: z.array(z.object({
       year: z.number(),
