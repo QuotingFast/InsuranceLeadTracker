@@ -101,7 +101,7 @@ function broadcastToClients(type: string, data: any) {
 
 export async function registerRoutes(app: Express, server: Server): Promise<void> {
   // WebSocket setup
-  const wss = new WebSocketServer({ server: server, path: '/ws' });
+  const wss = new WebSocketServer({ server, path: '/ws' });
   
   wss.on('connection', (ws) => {
     console.log('WebSocket client connected');
