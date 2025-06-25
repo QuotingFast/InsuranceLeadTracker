@@ -1,0 +1,116 @@
+Build a Complete Insurance Lead Management & Automated SMS System
+
+Create a full-stack insurance lead management platform with automated SMS campaigns, personalized quote pages, strict TCPA compliance, and real-time processing capabilities.
+
+CORE REQUIREMENTS:
+
+1. Database Architecture (PostgreSQL + Drizzle ORM)
+
+leads table: 6-digit QF codes, contact details, state/ZIP mapping, creation timestamps
+drivers table: Age, experience, violations, relationship to leads
+vehicles table: Year, make, model, VIN, linked to leads
+sms_messages table: Twilio SID tracking, delivery status, scheduling, error handling
+opt_outs table: Phone-based opt-out management with timestamps
+suppression_list table: Bulk suppression import capability
+2. Personalized Quote System
+
+Dynamic quote pages: /quote/QF123456 routes for each lead
+Lead data display: Personal info, driver details, vehicle information, current insurer
+Quote calculations: Age-based rates, multi-driver discounts, vehicle year adjustments
+Responsive design: Mobile-optimized quote presentation
+Quote tracking: View counts, conversion metrics, engagement analytics
+Call-to-action: Phone numbers, contact forms, quote acceptance
+3. SMS Campaign System
+
+Automated 3-message sequence: followup (immediate), urgent (+24hrs), lastchance (+48hrs)
+Personalized links: Each SMS contains unique quote URL (quotingfast.io/quote/QF123456)
+Message rotation: 10+ template variations to prevent spam flagging
+Rate limiting: 300/minute, 5000/hour with burst capability
+Twilio integration: Real SID tracking, delivery confirmation, error handling
+4. TCPA Compliance (CRITICAL)
+
+State-by-state timezone validation (50 states + DC)
+Business hours only: 8:00 AM - 9:00 PM in recipient's timezone
+Weekend blocking: No SMS Saturday/Sunday
+Emergency stop capability: File-based instant halt mechanism
+Automatic opt-out: Process STOP replies (error codes 21610, 21211, 21408)
+Null state blocking: Require state for timezone determination
+Night hours protection: Hard block 9:00 PM - 8:00 AM EST
+5. Lead Processing
+
+Webhook endpoint: /api/webhook/leads with nested contact/data structure
+Real-time processing: Immediate SMS upon lead receipt during business hours
+ZIP-to-state mapping: Comprehensive 50-state conversion system
+Phone normalization: Convert to +1XXXXXXXXXX format
+Duplicate prevention: Phone and email-based checking
+State population: Automatic ZIP code to state conversion for missing data
+6. High-Volume Processing
+
+Queue processor: Handle 7,000+ unmessaged lead backlog
+Parallel processing: 15-20 lead batches with staggered timing
+Continuous recovery: Convert failed "mock" messages to real deliveries
+Bulk operations: CSV import/export capabilities
+Performance monitoring: Real-time throughput tracking
+7. Dashboard & Management
+
+Lead overview: Search, filtering, status tracking
+SMS metrics: Delivery rates, failure analysis, Twilio SID verification
+Quote analytics: Page views, conversion rates, engagement tracking
+Real-time stats: Total leads, SMS sent, quotes viewed, conversions
+Error monitoring: Failed deliveries, TCPA violations, opt-out tracking
+Health checks: Automated system monitoring every 2-5 minutes
+8. Quote Page Features
+
+Professional design: Insurance company branding, trust indicators
+Lead information display: Name, age, current policy details
+Vehicle showcase: Year, make, model with relevant details
+Savings calculator: Potential monthly/annual savings estimates
+Contact integration: Click-to-call, email forms, agent assignment
+Mobile optimization: Touch-friendly interface, fast loading
+9. Monitoring & Alerts
+
+SMS reports: 30-minute interval reports to admin phone
+Health monitoring: Delivery rate tracking, authentication alerts
+Quote engagement: Track which leads view their personalized quotes
+TCPA violation detection: Immediate alerts for compliance breaches
+Performance alerts: Low delivery rates, authentication failures
+10. Advanced Features
+
+Suppression list: Import 400+ unsubscribed numbers
+Error recovery: Automatic retry for balance/auth failures
+State mapping: Handle multi-timezone states (TX, FL, etc.)
+Lead prioritization: Process newest leads first
+Compliance logging: Full audit trail for legal protection
+A/B testing: Different quote page layouts, SMS message variations
+11. Technical Stack
+
+Frontend: React + TypeScript, shadcn/ui components, TanStack Query
+Backend: Express.js + TypeScript, session management
+Database: PostgreSQL (Neon), Drizzle ORM with relations
+SMS: Twilio with comprehensive error handling
+Routing: Wouter for client-side quote page routing
+Deployment: Replit-optimized with workflow configuration
+12. Security & Compliance
+
+Environment secrets: Twilio credentials, database URL
+Session storage: PostgreSQL-based user sessions
+Input validation: Zod schemas throughout
+Error handling: Graceful failures with logging
+Data protection: No PII exposure in logs
+CRITICAL SUCCESS FACTORS:
+
+Achieve 98%+ delivery success rate with verified Twilio SIDs
+Maintain absolute TCPA compliance with zero violations
+Process 500-1500 SMS/hour sustained throughput
+Handle 10,000+ lead database with sub-second response times
+Provide real-time monitoring and emergency stop capabilities
+Track quote page engagement and conversion metrics
+BUSINESS RULES:
+
+Company: "Quoting Fast" (with space)
+Personalized URLs: Each lead gets unique quote link in SMS
+Business hours: Monday-Friday, state-specific timezone compliance
+Immediate processing: New leads get SMS within minutes during business hours
+Emergency protocols: Instant stop capability for compliance violations
+Quote tracking: Monitor which leads engage with their personalized quotes
+Build this as a production-ready system capable of processing thousands of insurance leads daily while maintaining perfect TCPA compliance, maximum delivery rates, and comprehensive quote page engagement tracking.
