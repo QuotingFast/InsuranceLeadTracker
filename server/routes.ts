@@ -323,7 +323,7 @@ export async function registerRoutes(app: Express, server: Server): Promise<void
         leadId,
         qfCode,
         phoneNumber,
-        callInitiated: true
+        callStarted: true
       });
 
       res.json({ success: true });
