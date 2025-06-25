@@ -251,7 +251,6 @@ export default function LeadsPage() {
                 );
               })
             )}
-          </div>
         </div>
       </div>
     </div>

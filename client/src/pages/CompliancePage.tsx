@@ -1,7 +1,4 @@
 import { useState } from "react";
-import { useIsMobile } from "@/hooks/use-mobile";
-import Sidebar from "@/components/Sidebar";
-import MobileBottomNav from "@/components/MobileBottomNav";
 import ComplianceMonitoring from "@/components/ComplianceMonitoring";
 import { Button } from "@/components/ui/button";
 
