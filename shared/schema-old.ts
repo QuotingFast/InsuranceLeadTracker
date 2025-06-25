@@ -1,194 +1,116 @@
-import { pgTable, serial, text, integer, timestamp, boolean, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, varchar, decimal } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Enhanced leads table for comprehensive webhook data
+// Leads table with 6-digit QF codes
 export const leads = pgTable("leads", {
   id: serial("id").primaryKey(),
-  qfCode: text("qf_code").unique().notNull(),
-  
-  // Basic contact info
+  qfCode: varchar("qf_code", { length: 8 }).notNull().unique(), // QF123456 format
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email"),
-  phone: text("phone").notNull(),
-  phone2: text("phone2"),
-  
-  // Address info
-  address: text("address"),
-  address2: text("address2"),
-  city: text("city"),
-  state: text("state").notNull(),
-  zipCode: text("zip_code").notNull(),
-  ipAddress: text("ip_address"),
-  
-  // Lead tracking
-  leadIdCode: text("lead_id_code"), // UUID from webhook
-  campaignId: integer("campaign_id"),
-  offerId: text("offer_id"),
-  sourceId: text("source_id"),
-  sellPrice: text("sell_price"),
-  landingPageUrl: text("landing_page_url"),
-  userAgent: text("user_agent"),
-  
-  // Insurance info
-  currentPolicy: text("current_policy"), // null means uninsured
-  requestedCoverageType: text("requested_coverage_type"),
-  requestedPropertyDamage: integer("requested_property_damage"),
-  requestedBodilyInjury: text("requested_bodily_injury"),
-  
-  // TCPA compliance
-  tcpaCompliant: boolean("tcpa_compliant").default(false),
-  tcpaConsentText: text("tcpa_consent_text"),
-  trustedFormCertUrl: text("trusted_form_cert_url"),
-  
-  // Original data for reference
-  rawData: json("raw_data"),
-  originallyCreated: timestamp("originally_created"),
+  phone: varchar("phone", { length: 15 }).notNull(), // +1XXXXXXXXXX format
+  state: varchar("state", { length: 2 }).notNull(),
+  zipCode: varchar("zip_code", { length: 10 }),
+  currentInsurer: text("current_insurer"),
+  monthlyPremium: decimal("monthly_premium", { precision: 10, scale: 2 }),
+  rawData: jsonb("raw_data"), // Store original webhook data
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// Enhanced drivers table for comprehensive driver data
+// Drivers table with relationship to leads
 export const drivers = pgTable("drivers", {
   id: serial("id").primaryKey(),
-  leadId: integer("lead_id").notNull().references(() => leads.id, { onDelete: "cascade" }),
-  firstName: text("first_name"),
-  lastName: text("last_name"),
-  relationship: text("relationship").notNull(),
-  birthDate: text("birth_date"),
-  gender: text("gender"),
-  maritalStatus: text("marital_status"),
-  licenseStatus: text("license_status").notNull(),
-  licenseState: text("license_state"),
-  ageLicensed: integer("age_licensed"),
-  licenseEverSuspended: boolean("license_ever_suspended").default(false),
-  requiresSr22: boolean("requires_sr22").default(false),
-  education: text("education"),
-  occupation: text("occupation"),
-  residenceType: text("residence_type"),
-  monthsAtResidence: integer("months_at_residence"),
-  monthsAtEmployer: integer("months_at_employer"),
-  bankruptcy: boolean("bankruptcy").default(false),
+  leadId: integer("lead_id").references(() => leads.id).notNull(),
+  age: integer("age").notNull(),
+  yearsOfExperience: integer("years_of_experience").notNull(),
   violations: integer("violations").default(0),
-  majorViolations: json("major_violations").$type<Array<{
-    state: string;
-    description: string;
-    violation_date: string;
-  }>>(),
-  tickets: json("tickets").$type<Array<{
-    ticket_date: string;
-    description: string;
-  }>>(),
-  accidents: json("accidents").$type<Array<{
-    accident_date: string;
-    damage: string;
-    at_fault: boolean;
-    description: string;
-  }>>(),
-  claims: json("claims").$type<Array<{
-    claim_date: string;
-    paid_amount: string;
-    description: string;
-  }>>(),
+  relationshipToLead: text("relationship_to_lead").notNull(), // primary, spouse, child, etc.
+  licenseStatus: text("license_status").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
-// Enhanced vehicles table for comprehensive vehicle data
+// Vehicles table linked to leads
 export const vehicles = pgTable("vehicles", {
   id: serial("id").primaryKey(),
-  leadId: integer("lead_id").notNull().references(() => leads.id, { onDelete: "cascade" }),
+  leadId: integer("lead_id").references(() => leads.id).notNull(),
   year: integer("year").notNull(),
   make: text("make").notNull(),
   model: text("model").notNull(),
-  submodel: text("submodel"),
-  vin: text("vin"),
-  ownership: text("ownership"), // Own, Lease, Finance
-  primaryUse: text("primary_use"), // Pleasure, Commute, Business, etc.
-  annualMiles: integer("annual_miles"),
-  oneWayDistance: integer("one_way_distance"),
-  weeklyCommuteDays: integer("weekly_commute_days"),
-  garage: text("garage"), // Garage, Car Port, On Street, No Cover
-  collisionDeductible: text("collision_deductible"),
-  comprehensiveDeductible: text("comprehensive_deductible"),
-  fourWheelDrive: boolean("four_wheel_drive").default(false),
-  airbags: boolean("airbags").default(false),
-  abs: boolean("abs").default(false),
-  automaticSeatBelts: boolean("automatic_seat_belts").default(false),
-  alarm: text("alarm"),
-  rental: boolean("rental").default(false),
-  towing: boolean("towing").default(false),
-  salvaged: boolean("salvaged").default(false),
+  vin: varchar("vin", { length: 17 }),
+  usage: text("usage"), // personal, business, etc.
+  annualMileage: integer("annual_mileage"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
-// Keep existing tables
+// SMS messages with Twilio SID tracking
 export const smsMessages = pgTable("sms_messages", {
   id: serial("id").primaryKey(),
-  leadId: integer("lead_id").notNull().references(() => leads.id, { onDelete: "cascade" }),
-  phone: text("phone").notNull(),
+  leadId: integer("lead_id").references(() => leads.id).notNull(),
+  phone: varchar("phone", { length: 15 }).notNull(),
   message: text("message").notNull(),
-  messageType: text("message_type").notNull(), // followup, urgent, lastchance, custom
-  templateUsed: text("template_used"),
-  status: text("status").notNull().default("pending"), // pending, sent, delivered, failed
-  twilioSid: text("twilio_sid"),
-  errorCode: text("error_code"),
+  messageType: varchar("message_type", { length: 20 }).notNull(), // followup, urgent, lastchance, custom
+  twilioSid: varchar("twilio_sid", { length: 34 }), // Twilio message SID
+  status: varchar("status", { length: 20 }).notNull().default("pending"), // pending, sent, delivered, failed, undelivered
+  errorCode: varchar("error_code", { length: 10 }),
   errorMessage: text("error_message"),
+  scheduledFor: timestamp("scheduled_for"),
   sentAt: timestamp("sent_at"),
   deliveredAt: timestamp("delivered_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull()
 });
 
+// Opt-outs with phone-based management
 export const optOuts = pgTable("opt_outs", {
   id: serial("id").primaryKey(),
-  phone: text("phone").notNull().unique(),
-  optOutMethod: text("opt_out_method").notNull(), // sms_reply, manual, auto_error
+  phone: varchar("phone", { length: 15 }).notNull().unique(),
+  optOutMethod: varchar("opt_out_method", { length: 20 }).notNull(), // sms_reply, manual, webhook
   optOutMessage: text("opt_out_message"),
-  createdAt: timestamp("created_at").defaultNow().notNull()
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Suppression list for bulk imports
 export const suppressionList = pgTable("suppression_list", {
   id: serial("id").primaryKey(),
-  phone: text("phone").notNull().unique(),
+  phone: varchar("phone", { length: 15 }).notNull().unique(),
   reason: text("reason"),
-  source: text("source").default("manual"),
-  createdAt: timestamp("created_at").defaultNow().notNull()
+  source: varchar("source", { length: 50 }), // bulk_import, manual, etc.
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Quote page views and engagement tracking
 export const quoteViews = pgTable("quote_views", {
   id: serial("id").primaryKey(),
-  leadId: integer("lead_id").notNull().references(() => leads.id, { onDelete: "cascade" }),
-  qfCode: text("qf_code").notNull(),
-  ipAddress: text("ip_address"),
+  leadId: integer("lead_id").references(() => leads.id).notNull(),
+  qfCode: varchar("qf_code", { length: 8 }).notNull(),
+  ipAddress: varchar("ip_address", { length: 45 }),
   userAgent: text("user_agent"),
-  viewedAt: timestamp("viewed_at").defaultNow().notNull()
+  referrer: text("referrer"),
+  viewedAt: timestamp("viewed_at").defaultNow().notNull(),
 });
 
+// Call tracking for conversion measurement
 export const callTracking = pgTable("call_tracking", {
   id: serial("id").primaryKey(),
-  leadId: integer("lead_id").notNull().references(() => leads.id, { onDelete: "cascade" }),
-  qfCode: text("qf_code").notNull(),
-  phoneNumber: text("phone_number").notNull(),
-  callStarted: boolean("call_started").default(false),
-  callDuration: integer("call_duration"), // seconds
-  callStatus: text("call_status"), // completed, busy, no_answer, failed
-  ipAddress: text("ip_address"),
-  userAgent: text("user_agent"),
-  createdAt: timestamp("created_at").defaultNow().notNull()
+  leadId: integer("lead_id").references(() => leads.id).notNull(),
+  qfCode: varchar("qf_code", { length: 8 }).notNull(),
+  phoneNumber: varchar("phone_number", { length: 15 }).notNull(),
+  callDuration: integer("call_duration"), // in seconds
+  callStatus: varchar("call_status", { length: 20 }), // completed, busy, no_answer, failed
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// System alerts and notifications
 export const systemAlerts = pgTable("system_alerts", {
   id: serial("id").primaryKey(),
-  alertType: text("alert_type").notNull(),
-  severity: text("severity").notNull(), // info, warning, error, critical
+  alertType: varchar("alert_type", { length: 50 }).notNull(), // delivery_rate, compliance, error, health_check
   message: text("message").notNull(),
-  metadata: json("metadata"),
+  severity: varchar("severity", { length: 20 }).notNull(), // info, warning, error, critical
   isRead: boolean("is_read").default(false),
-  createdAt: timestamp("created_at").defaultNow().notNull()
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Relations
@@ -224,45 +146,42 @@ export const callTrackingRelations = relations(callTracking, ({ one }) => ({
 export const insertLeadSchema = createInsertSchema(leads).omit({
   id: true,
   createdAt: true,
-  updatedAt: true
+  updatedAt: true,
 });
 
 export const insertDriverSchema = createInsertSchema(drivers).omit({
   id: true,
   createdAt: true,
-  updatedAt: true
 });
 
 export const insertVehicleSchema = createInsertSchema(vehicles).omit({
   id: true,
   createdAt: true,
-  updatedAt: true
 });
 
 export const insertSmsMessageSchema = createInsertSchema(smsMessages).omit({
   id: true,
   createdAt: true,
-  updatedAt: true
 });
 
 export const insertOptOutSchema = createInsertSchema(optOuts).omit({
   id: true,
-  createdAt: true
+  createdAt: true,
 });
 
 export const insertQuoteViewSchema = createInsertSchema(quoteViews).omit({
   id: true,
-  viewedAt: true
+  viewedAt: true,
 });
 
 export const insertCallTrackingSchema = createInsertSchema(callTracking).omit({
   id: true,
-  createdAt: true
+  createdAt: true,
 });
 
 export const insertSystemAlertSchema = createInsertSchema(systemAlerts).omit({
   id: true,
-  createdAt: true
+  createdAt: true,
 });
 
 // Types
@@ -283,7 +202,7 @@ export type InsertCallTracking = z.infer<typeof insertCallTrackingSchema>;
 export type SystemAlert = typeof systemAlerts.$inferSelect;
 export type InsertSystemAlert = z.infer<typeof insertSystemAlertSchema>;
 
-// Webhook schema for your actual data structure
+// Custom schemas for API requests
 export const webhookLeadSchema = z.object({
   id: z.number().optional(),
   url: z.string().optional(),

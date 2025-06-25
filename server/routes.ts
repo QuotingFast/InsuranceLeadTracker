@@ -215,17 +215,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isUnique = !existing;
       } while (!isUnique);
 
-      // Create lead record
+      // Create lead record with comprehensive data
       const lead = await storage.createLead({
         qfCode,
-        firstName: webhookData.contact.firstName,
-        lastName: webhookData.contact.lastName,
+        firstName: webhookData.contact.first_name,
+        lastName: webhookData.contact.last_name,
         email: webhookData.contact.email || '',
         phone: normalizedPhone,
+        phone2: webhookData.contact.phone2,
+        address: webhookData.contact.address,
+        address2: webhookData.contact.address2,
+        city: webhookData.contact.city,
         state: state,
-        zipCode: webhookData.contact.zipCode || '',
-        currentInsurer: webhookData.data.currentInsurer || '',
-        monthlyPremium: webhookData.data.monthlyPremium || '',
+        zipCode: webhookData.contact.zip_code || '',
+        ipAddress: webhookData.contact.ip_address,
+        leadIdCode: webhookData.meta?.lead_id_code,
+        campaignId: webhookData.campaign_id,
+        offerId: webhookData.meta?.offer_id,
+        sourceId: webhookData.meta?.source_id,
+        sellPrice: webhookData.sell_price,
+        landingPageUrl: webhookData.meta?.landing_page_url,
+        userAgent: webhookData.meta?.user_agent,
+        currentPolicy: webhookData.data.current_policy,
+        requestedCoverageType: webhookData.data.requested_policy?.coverage_type,
+        requestedPropertyDamage: webhookData.data.requested_policy?.property_damage,
+        requestedBodilyInjury: webhookData.data.requested_policy?.bodily_injury,
+        tcpaCompliant: webhookData.meta?.tcpa_compliant || false,
+        tcpaConsentText: webhookData.meta?.tcpa_consent_text,
+        trustedFormCertUrl: webhookData.meta?.trusted_form_cert_url,
+        originallyCreated: webhookData.meta?.originally_created ? new Date(webhookData.meta.originally_created) : undefined,
         rawData: req.body
       });
 
