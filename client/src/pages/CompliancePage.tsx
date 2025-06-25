@@ -3,18 +3,8 @@ import ComplianceMonitoring from "@/components/ComplianceMonitoring";
 import { Button } from "@/components/ui/button";
 
 export default function CompliancePage() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const isMobile = useIsMobile();
-
   return (
     <div className="min-h-screen bg-slate-50">
-      <Sidebar 
-        isOpen={sidebarOpen} 
-        onClose={() => setSidebarOpen(false)}
-        currentPage="compliance"
-      />
-
-      <div className={`transition-all duration-300 ${!isMobile && sidebarOpen ? 'ml-64' : ''}`}>
         {/* Header */}
         <div className="bg-white shadow-sm border-b border-slate-200">
           <div className="px-4 py-6">
@@ -42,13 +32,10 @@ export default function CompliancePage() {
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-6">
-          <ComplianceMonitoring />
-        </div>
+      {/* Content */}
+      <div className="p-6">
+        <ComplianceMonitoring />
       </div>
-
-      {isMobile && <MobileBottomNav currentPage="compliance" />}
     </div>
   );
 }

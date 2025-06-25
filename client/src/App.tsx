@@ -15,6 +15,8 @@ import SMSPage from "@/pages/SMSPage";
 import OptOutsPage from "@/pages/OptOutsPage";
 import CompliancePage from "@/pages/CompliancePage";
 import AnalyticsPage from "@/pages/AnalyticsPage";
+import QuotesPage from "@/pages/QuotesPage";
+import SettingsPage from "@/pages/SettingsPage";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -23,9 +25,11 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/leads" component={LeadsPage} />
       <Route path="/sms" component={SMSPage} />
+      <Route path="/quotes" component={QuotesPage} />
       <Route path="/analytics" component={AnalyticsPage} />
       <Route path="/compliance" component={CompliancePage} />
       <Route path="/optouts" component={OptOutsPage} />
+      <Route path="/settings" component={SettingsPage} />
       <Route path="/quote/:qfCode" component={QuotePage} />
       <Route path="/quote" component={QuotePage} />
       <Route component={NotFound} />
