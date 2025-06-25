@@ -1,0 +1,25 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Check out your code
+      - uses: actions/checkout@v4
+
+      # 2️⃣ Install Node 18 (change if your project uses another version)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      # 3️⃣ Install dependencies
+      - run: npm ci
+
+      # 4️⃣ Build / test / lint – tweak to match your scripts
+      - run: npm run build
+      # - run: npm test
+      # - run: npm run lint
