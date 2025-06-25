@@ -1,4 +1,4 @@
-import { Twilio } from 'twilio';
+import twilio from 'twilio';
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID || process.env.TWILIO_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN || process.env.TWILIO_TOKEN;
@@ -8,7 +8,7 @@ if (!accountSid || !authToken || !phoneNumber) {
   throw new Error('Missing Twilio credentials. Please set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER');
 }
 
-const client = new Twilio(accountSid, authToken);
+const client = twilio(accountSid, authToken);
 
 export interface SendSmsResult {
   success: boolean;

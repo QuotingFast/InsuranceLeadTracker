@@ -131,7 +131,7 @@ async function processLeadSMS(leadId: number, messageType: 'followup' | 'urgent'
       type: 'error',
       severity: 'error',
       message: `Failed to process SMS for lead ${leadId}`,
-      metadata: { leadId, error: error.message }
+      metadata: { leadId, error: error instanceof Error ? error.message : 'Unknown error' }
     });
   }
 }
@@ -195,9 +195,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Auto-populate state from ZIP if missing
-      let state = webhookData.contact.state;
+      let state = webhookData.contact.state || '';
       if (!state && webhookData.contact.zipCode) {
-        state = getStateFromZipCode(webhookData.contact.zipCode);
+        state = getStateFromZipCode(webhookData.contact.zipCode) || '';
       }
 
       if (!state) {
@@ -277,12 +277,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: 'error',
         severity: 'error',
         message: 'Lead webhook processing failed',
-        metadata: { error: error.message, body: req.body }
+        metadata: { error: error instanceof Error ? error.message : 'Unknown error', body: req.body }
       });
 
       res.status(500).json({ 
         error: 'Failed to process lead',
-        details: error.message 
+        details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });
@@ -463,7 +463,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Error sending custom SMS:', error);
       res.status(500).json({ 
         error: 'Failed to send SMS',
-        details: error.message 
+        details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });
