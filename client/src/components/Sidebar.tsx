@@ -12,16 +12,20 @@ import {
   Ban, 
   Settings, 
   X,
-  CheckCircle
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
   currentPage: string;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export default function Sidebar({ isOpen, onClose, currentPage }: SidebarProps) {
+export default function Sidebar({ isOpen, onClose, currentPage, isCollapsed = false, onToggleCollapse }: SidebarProps) {
   const [location] = useLocation();
 
   // Get total leads count for display
@@ -91,21 +95,37 @@ export default function Sidebar({ isOpen, onClose, currentPage }: SidebarProps) 
   const SidebarContent = () => (
     <>
       {/* Logo */}
-      <div className="px-6 py-4 border-b border-slate-200">
+      <div className={`${isCollapsed ? 'px-3' : 'px-6'} py-4 border-b border-slate-200 relative`}>
         <div className="flex items-center gap-3">
           <img 
             src="https://quoteproauto.com/logo" 
             alt="QuotePro Auto Logo" 
-            className="h-8 w-auto object-contain"
+            className="h-8 w-auto object-contain flex-shrink-0"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
             }}
           />
-          <div>
-            <h1 className="text-xl font-bold text-blue-600">QuotePro Auto</h1>
-            <p className="text-sm text-slate-500 mt-1">Lead Management</p>
-          </div>
+          {!isCollapsed && (
+            <div>
+              <h1 className="text-xl font-bold text-blue-600">QuotePro Auto</h1>
+              <p className="text-sm text-slate-500 mt-1">Lead Management</p>
+            </div>
+          )}
         </div>
+        
+        {/* Collapse Toggle Button - Only show on desktop */}
+        {onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            className="absolute -right-3 top-1/2 transform -translate-y-1/2 bg-white border border-slate-200 rounded-full p-1 shadow-sm hover:bg-slate-50 z-10"
+          >
+            {isCollapsed ? (
+              <ChevronRight className="h-4 w-4 text-slate-600" />
+            ) : (
+              <ChevronLeft className="h-4 w-4 text-slate-600" />
+            )}
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
