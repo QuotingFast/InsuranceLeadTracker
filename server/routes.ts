@@ -498,8 +498,9 @@ export async function registerRoutes(app: Express, server: Server): Promise<void
           if (matchingLead) {
             await storage.createSmsMessage({
               leadId: matchingLead.id,
+              phone: normalizedPhone,
+              message: finalMessage,
               messageType: 'custom',
-              messageText: finalMessage,
               status: 'sent',
               twilioSid: result.messageSid
             });

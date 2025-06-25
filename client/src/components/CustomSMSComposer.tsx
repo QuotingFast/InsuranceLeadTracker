@@ -46,8 +46,8 @@ export default function CustomSMSComposer() {
       scheduleForBusinessHours: boolean;
       templateType: string;
     }) => {
-      const response = await apiRequest('POST', '/api/sms/send', data);
-      return response.json();
+      const response = await apiRequest('POST', '/api/sms/custom', data);
+      return response;
     },
     onSuccess: (data) => {
       toast({
