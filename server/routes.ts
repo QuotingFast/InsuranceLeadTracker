@@ -56,11 +56,7 @@ async function processLeadSMS(leadId: number, messageType: 'followup' | 'urgent'
 
     // Get appropriate template
     const template = getRandomTemplate(messageType);
-    const personalizedMessage = personalizeSmsMessage(template, {
-      firstName: lead.firstName,
-      qfCode: lead.qfCode,
-      currentPolicy: lead.currentPolicy || 'uninsured'
-    });
+    const personalizedMessage = personalizeSmsMessage(template, lead.firstName, lead.qfCode);
 
     // Create SMS record
     const smsRecord = await storage.createSmsMessage({
@@ -80,7 +76,7 @@ async function processLeadSMS(leadId: number, messageType: 'followup' | 'urgent'
       twilioSid: result.messageSid,
       errorCode: result.errorCode,
       errorMessage: result.errorMessage,
-      sentAt: new Date()
+      sentAt: result.success ? new Date() : undefined
     });
 
     // Broadcast update
@@ -103,7 +99,24 @@ function broadcastToClients(type: string, data: any) {
   });
 }
 
-export async function registerRoutes(app: Express): Promise<void> {
+export async function registerRoutes(app: Express, server: Server): Promise<void> {
+  // WebSocket setup
+  const wss = new WebSocketServer({ server: server, path: '/ws' });
+  
+  wss.on('connection', (ws) => {
+    console.log('WebSocket client connected');
+    wsConnections.add(ws);
+    
+    ws.on('close', () => {
+      wsConnections.delete(ws);
+      console.log('WebSocket client disconnected');
+    });
+    
+    ws.on('error', (error) => {
+      console.error('WebSocket error:', error);
+      wsConnections.delete(ws);
+    });
+  });
 
   // Start background services
   startHourlyReports();
