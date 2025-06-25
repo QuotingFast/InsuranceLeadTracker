@@ -487,7 +487,9 @@ export async function registerRoutes(app: Express, server: Server): Promise<void
         });
       }
 
+      console.log('Attempting to send SMS to:', normalizedPhone, 'Message:', finalMessage.substring(0, 50) + '...');
       const result = await sendSms(normalizedPhone, finalMessage);
+      console.log('SMS Result:', result);
       
       if (result.success) {
         // Log the SMS in database if we have a matching lead

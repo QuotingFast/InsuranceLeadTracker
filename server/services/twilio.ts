@@ -5,10 +5,11 @@ const authToken = process.env.TWILIO_AUTH_TOKEN || process.env.TWILIO_TOKEN;
 const phoneNumber = process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_FROM_NUMBER;
 
 if (!accountSid || !authToken || !phoneNumber) {
-  throw new Error('Missing Twilio credentials. Please set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER');
+  console.error('Missing Twilio credentials:', { accountSid: !!accountSid, authToken: !!authToken, phoneNumber: !!phoneNumber });
+  console.error('Available env vars:', Object.keys(process.env).filter(k => k.includes('TWILIO')));
 }
 
-const client = twilio(accountSid, authToken);
+const client = accountSid && authToken ? twilio(accountSid, authToken) : null;
 
 export interface SendSmsResult {
   success: boolean;
@@ -23,6 +24,14 @@ export async function sendSms(
   webhookUrl?: string
 ): Promise<SendSmsResult> {
   try {
+    if (!client) {
+      return {
+        success: false,
+        errorCode: 'MISSING_CREDENTIALS',
+        errorMessage: 'Twilio client not initialized - missing credentials'
+      };
+    }
+
     const messageOptions: any = {
       body: message,
       from: phoneNumber,
